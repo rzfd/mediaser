@@ -1,0 +1,97 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: mediashar_postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: donation_system
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mediashar_network
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: mediashar_pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@mediashar.com
+      PGADMIN_DEFAULT_PASSWORD: admin123
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+    ports:
+      - "8082:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
+    depends_on:
+      - postgres
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: mediashar_app
+    ports:
+      - "8080:8080"
+    environment:
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=donation_system
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - SERVER_PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
+  swagger-ui:
+    image: swaggerapi/swagger-ui:latest
+    container_name: mediashar_swagger
+    ports:
+      - "8083:8080"
+    environment:
+      - SWAGGER_JSON=/app/swagger.yaml
+      - BASE_URL=/
+      - DEEP_LINKING=true
+      - DISPLAY_OPERATION_ID=true
+      - DEFAULT_MODELS_EXPAND_DEPTH=1
+      - DEFAULT_MODEL_EXPAND_DEPTH=1
+      - DISPLAY_REQUEST_DURATION=true
+      - DOC_EXPANSION=list
+      - FILTER=true
+      - SHOW_EXTENSIONS=true
+      - SHOW_COMMON_EXTENSIONS=true
+      - TRY_IT_OUT_ENABLED=true
+    volumes:
+      - ./docs/swagger.yaml:/app/swagger.yaml:ro
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
+volumes:
+  postgres_data:
+  pgadmin_data:
+
+networks:
+  mediashar_network:
+    driver: bridge 

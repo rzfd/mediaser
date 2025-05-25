@@ -1,0 +1,1173 @@
+openapi: 3.0.3
+info:
+  title: MediaShar Donation System API
+  description: |
+    Complete API documentation for MediaShar donation system with JWT authentication.
+    
+    ## Authentication
+    This API uses JWT Bearer token authentication. Include the token in the Authorization header:
+    ```
+    Authorization: Bearer <your-jwt-token>
+    ```
+    
+    ## Getting Started
+    1. Register a new user (donator or streamer)
+    2. Login to get JWT token
+    3. Use the token for protected endpoints
+    
+    ## Base URL
+    - Development: `http://localhost:8080/api`
+    
+  version: 1.0.0
+  contact:
+    name: MediaShar API Support
+    url: https://github.com/rzfd/mediashar
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
+
+servers:
+  - url: http://localhost:8080/api
+    description: Development server
+  - url: https://api.mediashar.com/api
+    description: Production server (if available)
+
+security:
+  - BearerAuth: []
+
+paths:
+  # Authentication Endpoints
+  /auth/register:
+    post:
+      tags:
+        - Authentication
+      summary: Register new user
+      description: Register a new user as either donator or streamer
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RegisterRequest'
+            examples:
+              donator:
+                summary: Register as donator
+                value:
+                  username: "donator1"
+                  email: "donator@example.com"
+                  password: "password123"
+                  full_name: "John Donator"
+                  is_streamer: false
+                  description: "Regular donator"
+              streamer:
+                summary: Register as streamer
+                value:
+                  username: "streamer1"
+                  email: "streamer@example.com"
+                  password: "password123"
+                  full_name: "Jane Streamer"
+                  is_streamer: true
+                  description: "Gaming streamer"
+      responses:
+        '201':
+          description: User registered successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '400':
+          description: Bad request - validation error or duplicate email
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/login:
+    post:
+      tags:
+        - Authentication
+      summary: User login
+      description: Authenticate user and get JWT token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+            example:
+              email: "donator@example.com"
+              password: "password123"
+      responses:
+        '200':
+          description: Login successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuthResponse'
+        '401':
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /auth/profile:
+    get:
+      tags:
+        - Authentication
+      summary: Get user profile
+      description: Get current user profile information
+      responses:
+        '200':
+          description: User profile retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserProfileResponse'
+        '401':
+          description: Unauthorized
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      tags:
+        - Authentication
+      summary: Update user profile
+      description: Update current user profile information
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateProfileRequest'
+            example:
+              full_name: "John Updated Donator"
+              description: "Updated description"
+              profile_pic: "https://example.com/avatar.jpg"
+      responses:
+        '200':
+          description: Profile updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/change-password:
+    post:
+      tags:
+        - Authentication
+      summary: Change password
+      description: Change user password
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangePasswordRequest'
+            example:
+              current_password: "password123"
+              new_password: "newpassword123"
+      responses:
+        '200':
+          description: Password changed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /auth/refresh:
+    post:
+      tags:
+        - Authentication
+      summary: Refresh JWT token
+      description: Get a new JWT token using existing token
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  description: Current JWT token
+              required:
+                - token
+      responses:
+        '200':
+          description: Token refreshed successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      token:
+                        type: string
+                        description: New JWT token
+
+  /auth/logout:
+    post:
+      tags:
+        - Authentication
+      summary: Logout user
+      description: Logout current user and invalidate token
+      responses:
+        '200':
+          description: Logout successful
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # User Management Endpoints
+  /users/{id}:
+    get:
+      tags:
+        - User Management
+      summary: Get user by ID
+      description: Get user information by user ID
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      responses:
+        '200':
+          description: User information retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserResponse'
+        '404':
+          description: User not found
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+    
+    put:
+      tags:
+        - User Management
+      summary: Update user
+      description: Update user information (requires authentication)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateUserRequest'
+      responses:
+        '200':
+          description: User updated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /streamers:
+    get:
+      tags:
+        - User Management
+      summary: List streamers
+      description: Get list of all streamers with pagination
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+          description: Number of items per page
+      responses:
+        '200':
+          description: Streamers list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/User'
+
+  /users/{id}/donations:
+    get:
+      tags:
+        - User Management
+      summary: Get user donations
+      description: Get donations made by a specific user
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: User ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: User donations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Donation'
+
+  # Donation Endpoints
+  /donations:
+    post:
+      tags:
+        - Donations
+      summary: Create donation
+      description: Create a new donation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateDonationRequest'
+            example:
+              amount: 25.50
+              currency: "USD"
+              message: "Great stream! Keep it up!"
+              streamer_id: 2
+              display_name: "Anonymous Supporter"
+              is_anonymous: false
+      responses:
+        '201':
+          description: Donation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DonationResponse'
+    
+    get:
+      tags:
+        - Donations
+      summary: List donations
+      description: Get list of donations with pagination
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Donations list retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Donation'
+
+  /donations/{id}:
+    get:
+      tags:
+        - Donations
+      summary: Get donation by ID
+      description: Get specific donation details
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Donation ID
+      responses:
+        '200':
+          description: Donation details retrieved successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DonationResponse'
+
+  /donations/latest:
+    get:
+      tags:
+        - Donations
+      summary: Get latest donations
+      description: Get latest donations with limit
+      parameters:
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            default: 5
+          description: Number of latest donations to retrieve
+      responses:
+        '200':
+          description: Latest donations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Donation'
+
+  /payments/process:
+    post:
+      tags:
+        - Donations
+      summary: Process payment
+      description: Process payment for a donation
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ProcessPaymentRequest'
+            example:
+              donation_id: 1
+              payment_provider: "paypal"
+              payment_method: "card"
+      responses:
+        '200':
+          description: Payment processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  # Streamer Endpoints
+  /streamers/{id}/donations:
+    get:
+      tags:
+        - Streamer Endpoints
+      summary: Get streamer donations
+      description: Get donations received by a streamer (streamer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Streamer ID
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+      responses:
+        '200':
+          description: Streamer donations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Donation'
+        '403':
+          description: Access denied - Streamers only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  /streamers/{id}/total:
+    get:
+      tags:
+        - Streamer Endpoints
+      summary: Get total donations
+      description: Get total donation amount for a streamer (streamer only)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Streamer ID
+      responses:
+        '200':
+          description: Total donations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      total:
+                        type: number
+                        format: float
+                        description: Total donation amount
+        '403':
+          description: Access denied - Streamers only
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResponse'
+
+  # QRIS Payment Endpoints
+  /qris/donate:
+    post:
+      tags:
+        - QRIS Payments
+      summary: Create QRIS donation
+      description: Create a donation with QRIS payment method (anonymous or authenticated)
+      security:
+        - BearerAuth: []
+        - {}
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRISDonationRequest'
+            examples:
+              anonymous:
+                summary: Anonymous QRIS donation
+                value:
+                  amount: 50000
+                  currency: "IDR"
+                  message: "Semangat streaming!"
+                  streamer_id: 2
+                  display_name: "Anonymous Supporter"
+                  is_anonymous: true
+              authenticated:
+                summary: Authenticated QRIS donation
+                value:
+                  amount: 100000
+                  currency: "IDR"
+                  message: "Keep up the great work!"
+                  streamer_id: 2
+                  display_name: "Loyal Fan"
+                  is_anonymous: false
+      responses:
+        '201':
+          description: QRIS donation created successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRISResponse'
+
+  /qris/donations/{id}/generate:
+    post:
+      tags:
+        - QRIS Payments
+      summary: Generate QRIS for existing donation
+      description: Generate QRIS code for an existing donation
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Donation ID
+      responses:
+        '200':
+          description: QRIS generated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/QRISGenerateResponse'
+
+  /qris/status/{transaction_id}:
+    get:
+      tags:
+        - QRIS Payments
+      summary: Check QRIS payment status
+      description: Check the status of a QRIS payment transaction
+      parameters:
+        - name: transaction_id
+          in: path
+          required: true
+          schema:
+            type: string
+          description: Transaction ID
+          example: "TXN123456789"
+      responses:
+        '200':
+          description: Payment status retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: object
+                    properties:
+                      status:
+                        type: string
+                        enum: [pending, success, failed]
+                        description: Payment status
+
+  # Webhook Endpoints
+  /webhooks/paypal:
+    post:
+      tags:
+        - Webhooks
+      summary: PayPal webhook
+      description: Handle PayPal webhook notifications
+      security: []
+      parameters:
+        - name: PAYPAL-TRANSMISSION-ID
+          in: header
+          required: true
+          schema:
+            type: string
+          description: PayPal transmission ID
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PayPalWebhookRequest'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /webhooks/stripe:
+    post:
+      tags:
+        - Webhooks
+      summary: Stripe webhook
+      description: Handle Stripe webhook notifications
+      security: []
+      parameters:
+        - name: Stripe-Signature
+          in: header
+          required: true
+          schema:
+            type: string
+          description: Stripe signature
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/StripeWebhookRequest'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+  /webhooks/qris:
+    post:
+      tags:
+        - Webhooks
+      summary: QRIS webhook
+      description: Handle QRIS webhook notifications
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/QRISWebhookRequest'
+      responses:
+        '200':
+          description: Webhook processed successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SuccessResponse'
+
+components:
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT token obtained from login endpoint
+
+  schemas:
+    # Request Schemas
+    RegisterRequest:
+      type: object
+      required:
+        - username
+        - email
+        - password
+        - full_name
+        - is_streamer
+      properties:
+        username:
+          type: string
+          minLength: 3
+          maxLength: 50
+          example: "donator1"
+        email:
+          type: string
+          format: email
+          example: "donator@example.com"
+        password:
+          type: string
+          minLength: 6
+          example: "password123"
+        full_name:
+          type: string
+          minLength: 2
+          maxLength: 100
+          example: "John Donator"
+        is_streamer:
+          type: boolean
+          example: false
+        description:
+          type: string
+          maxLength: 500
+          example: "Regular donator"
+
+    LoginRequest:
+      type: object
+      required:
+        - email
+        - password
+      properties:
+        email:
+          type: string
+          format: email
+          example: "donator@example.com"
+        password:
+          type: string
+          example: "password123"
+
+    UpdateProfileRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+        profile_pic:
+          type: string
+          format: uri
+
+    ChangePasswordRequest:
+      type: object
+      required:
+        - current_password
+        - new_password
+      properties:
+        current_password:
+          type: string
+        new_password:
+          type: string
+          minLength: 6
+
+    UpdateUserRequest:
+      type: object
+      properties:
+        full_name:
+          type: string
+          maxLength: 100
+        description:
+          type: string
+          maxLength: 500
+
+    CreateDonationRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - streamer_id
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 25.50
+        currency:
+          type: string
+          enum: [USD, IDR, EUR, GBP]
+          example: "USD"
+        message:
+          type: string
+          maxLength: 500
+          example: "Great stream! Keep it up!"
+        streamer_id:
+          type: integer
+          example: 2
+        display_name:
+          type: string
+          maxLength: 100
+          example: "Anonymous Supporter"
+        is_anonymous:
+          type: boolean
+          default: false
+
+    ProcessPaymentRequest:
+      type: object
+      required:
+        - donation_id
+        - payment_provider
+        - payment_method
+      properties:
+        donation_id:
+          type: integer
+        payment_provider:
+          type: string
+          enum: [paypal, stripe, qris]
+        payment_method:
+          type: string
+          enum: [card, bank_transfer, qris]
+
+    QRISDonationRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - streamer_id
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 1000
+          example: 50000
+        currency:
+          type: string
+          enum: [IDR]
+          example: "IDR"
+        message:
+          type: string
+          maxLength: 500
+          example: "Semangat streaming!"
+        streamer_id:
+          type: integer
+          example: 2
+        display_name:
+          type: string
+          maxLength: 100
+          example: "Anonymous Supporter"
+        is_anonymous:
+          type: boolean
+          default: true
+
+    PayPalWebhookRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        event_type:
+          type: string
+        resource:
+          type: object
+
+    StripeWebhookRequest:
+      type: object
+      properties:
+        id:
+          type: string
+        type:
+          type: string
+        data:
+          type: object
+
+    QRISWebhookRequest:
+      type: object
+      required:
+        - transaction_id
+        - status
+        - amount
+        - currency
+      properties:
+        transaction_id:
+          type: string
+        status:
+          type: string
+          enum: [SUCCESS, FAILED, PENDING]
+        amount:
+          type: number
+        currency:
+          type: string
+        merchant_id:
+          type: string
+        timestamp:
+          type: string
+          format: date-time
+
+    # Response Schemas
+    User:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        username:
+          type: string
+          example: "donator1"
+        email:
+          type: string
+          format: email
+          example: "donator@example.com"
+        full_name:
+          type: string
+          example: "John Donator"
+        is_streamer:
+          type: boolean
+          example: false
+        description:
+          type: string
+          example: "Regular donator"
+        profile_pic:
+          type: string
+          format: uri
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    Donation:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        amount:
+          type: number
+          format: float
+          example: 25.50
+        currency:
+          type: string
+          example: "USD"
+        message:
+          type: string
+          example: "Great stream!"
+        streamer_id:
+          type: integer
+          example: 2
+        donator_id:
+          type: integer
+          nullable: true
+          example: 1
+        display_name:
+          type: string
+          example: "Anonymous Supporter"
+        is_anonymous:
+          type: boolean
+          example: false
+        status:
+          type: string
+          enum: [pending, completed, failed]
+          example: "pending"
+        payment_provider:
+          type: string
+          enum: [paypal, stripe, qris]
+          nullable: true
+        transaction_id:
+          type: string
+          nullable: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    AuthResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "User registered successfully"
+        data:
+          type: object
+          properties:
+            user:
+              $ref: '#/components/schemas/User'
+            token:
+              type: string
+              description: JWT token
+              example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+    UserResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          $ref: '#/components/schemas/User'
+
+    UserProfileResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          $ref: '#/components/schemas/User'
+
+    DonationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Donation created successfully"
+        data:
+          $ref: '#/components/schemas/Donation'
+
+    QRISResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "QRIS donation created successfully"
+        data:
+          type: object
+          properties:
+            donation:
+              $ref: '#/components/schemas/Donation'
+            qr_code:
+              type: string
+              description: Base64 encoded QR code image
+              example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+            transaction_id:
+              type: string
+              example: "TXN123456789"
+
+    QRISGenerateResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            qr_code:
+              type: string
+              description: Base64 encoded QR code image
+            transaction_id:
+              type: string
+
+    SuccessResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Operation completed successfully"
+
+    ErrorResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "error"
+        message:
+          type: string
+          example: "Error description"
+        error:
+          type: string
+          example: "Detailed error information"
+
+tags:
+  - name: Authentication
+    description: User authentication and profile management
+  - name: User Management
+    description: User information and management
+  - name: Donations
+    description: Donation creation and management
+  - name: Streamer Endpoints
+    description: Streamer-specific endpoints (requires streamer role)
+  - name: QRIS Payments
+    description: QRIS payment integration for Indonesian market
+  - name: Webhooks
+    description: Webhook endpoints for payment providers 

@@ -1,0 +1,110 @@
+package repository
+
+import (
+	"github.com/rzfd/mediashar/internal/models"
+	"gorm.io/gorm"
+)
+
+type DonationRepository interface {
+	Create(donation *models.Donation) error
+	GetByID(id uint) (*models.Donation, error)
+	GetByTransactionID(transactionID string) (*models.Donation, error)
+	Update(donation *models.Donation) error
+	Delete(id uint) error
+	List(offset, limit int) ([]*models.Donation, error)
+	GetByDonatorID(donatorID uint, offset, limit int) ([]*models.Donation, error)
+	GetByStreamerID(streamerID uint, offset, limit int) ([]*models.Donation, error)
+	UpdateStatus(id uint, status models.PaymentStatus) error
+	GetLatestDonations(limit int) ([]*models.Donation, error)
+	GetTotalAmountByStreamer(streamerID uint) (float64, error)
+}
+
+type donationRepository struct {
+	db *gorm.DB
+}
+
+func NewDonationRepository(db *gorm.DB) DonationRepository {
+	return &donationRepository{db: db}
+}
+
+func (r *donationRepository) Create(donation *models.Donation) error {
+	return r.db.Create(donation).Error
+}
+
+func (r *donationRepository) GetByID(id uint) (*models.Donation, error) {
+	var donation models.Donation
+	err := r.db.Preload("Donator").Preload("Streamer").First(&donation, id).Error
+	if err != nil {
+		return nil, err
+	}
+	return &donation, nil
+}
+
+func (r *donationRepository) GetByTransactionID(transactionID string) (*models.Donation, error) {
+	var donation models.Donation
+	err := r.db.Where("transaction_id = ?", transactionID).First(&donation).Error
+	if err != nil {
+		return nil, err
+	}
+	return &donation, nil
+}
+
+func (r *donationRepository) Update(donation *models.Donation) error {
+	return r.db.Save(donation).Error
+}
+
+func (r *donationRepository) Delete(id uint) error {
+	return r.db.Delete(&models.Donation{}, id).Error
+}
+
+func (r *donationRepository) List(offset, limit int) ([]*models.Donation, error) {
+	var donations []*models.Donation
+	err := r.db.Preload("Donator").Preload("Streamer").
+		Offset(offset).Limit(limit).
+		Order("created_at DESC").
+		Find(&donations).Error
+	return donations, err
+}
+
+func (r *donationRepository) GetByDonatorID(donatorID uint, offset, limit int) ([]*models.Donation, error) {
+	var donations []*models.Donation
+	err := r.db.Preload("Streamer").
+		Where("donator_id = ?", donatorID).
+		Offset(offset).Limit(limit).
+		Order("created_at DESC").
+		Find(&donations).Error
+	return donations, err
+}
+
+func (r *donationRepository) GetByStreamerID(streamerID uint, offset, limit int) ([]*models.Donation, error) {
+	var donations []*models.Donation
+	err := r.db.Preload("Donator").
+		Where("streamer_id = ?", streamerID).
+		Offset(offset).Limit(limit).
+		Order("created_at DESC").
+		Find(&donations).Error
+	return donations, err
+}
+
+func (r *donationRepository) UpdateStatus(id uint, status models.PaymentStatus) error {
+	return r.db.Model(&models.Donation{}).Where("id = ?", id).Update("status", status).Error
+}
+
+func (r *donationRepository) GetLatestDonations(limit int) ([]*models.Donation, error) {
+	var donations []*models.Donation
+	err := r.db.Preload("Donator").Preload("Streamer").
+		Where("status = ?", models.PaymentCompleted).
+		Order("created_at DESC").
+		Limit(limit).
+		Find(&donations).Error
+	return donations, err
+}
+
+func (r *donationRepository) GetTotalAmountByStreamer(streamerID uint) (float64, error) {
+	var total float64
+	err := r.db.Model(&models.Donation{}).
+		Where("streamer_id = ? AND status = ?", streamerID, models.PaymentCompleted).
+		Select("COALESCE(SUM(amount), 0) as total").
+		Scan(&total).Error
+	return total, err
+} 
