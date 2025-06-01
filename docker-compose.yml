@@ -67,8 +67,8 @@ services:
       
       # Midtrans Configuration (Sandbox) - User's valid credentials
       - MIDTRANS_MERCHANT_ID=G454372620
-      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1ATcTYWiYy
-      - MIDTRANS_SERVER_KEY=SB-Mid-server-Z28uCQ5-zrUcEEbes_eijqnu
+      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
+      - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu
       - MIDTRANS_ENVIRONMENT=sandbox
       
       # Payment Configuration (Optional)
