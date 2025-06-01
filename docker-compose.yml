@@ -65,10 +65,10 @@ services:
       - JWT_SECRET=your-super-secret-jwt-key-change-in-production
       - JWT_TOKEN_EXPIRY_HOURS=24
       
-      # Midtrans Configuration (Sandbox)
+      # Midtrans Configuration (Sandbox) - User's valid credentials
       - MIDTRANS_MERCHANT_ID=G454372620
-      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
-      - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEbes_eijanu
+      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1ATcTYWiYy
+      - MIDTRANS_SERVER_KEY=SB-Mid-server-Z28uCQ5-zrUcEEbes_eijqnu
       - MIDTRANS_ENVIRONMENT=sandbox
       
       # Payment Configuration (Optional)
@@ -84,11 +84,40 @@ services:
       - mediashar_network
     # Add health check for the app
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8080/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: mediashar_frontend
+    ports:
+      - "8000:80"
+    environment:
+      # Frontend configuration
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    depends_on:
+      app:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    # Health check for frontend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      # Optional: Mount logs for debugging
+      - frontend_logs:/var/log/nginx
 
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
@@ -122,6 +151,7 @@ services:
       - mediashar_network
     depends_on:
       - app
+      - frontend
     command: ["tail", "-f", "/dev/null"]  # Keep container running
     profiles:
       - testing  # Only start when testing profile is used
@@ -129,6 +159,7 @@ services:
 volumes:
   postgres_data:
   pgadmin_data:
+  frontend_logs:
 
 networks:
   mediashar_network:

@@ -72,24 +72,33 @@ func main() {
 	// Global middleware
 	e.Use(middleware.Logger())
 	e.Use(middleware.Recover())
-	e.Use(middleware.CORS())
+	
+	// CORS middleware with specific configuration for frontend
+	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
+		AllowOrigins: []string{
+			"http://localhost:8000",  // Frontend testing interface
+			"http://localhost:3000",  // Common React dev port
+			"http://localhost:3001",  // Alternative React port
+			"http://127.0.0.1:8000",  // Alternative localhost format
+			"http://127.0.0.1:3000",  // Alternative localhost format
+		},
+		AllowMethods: []string{
+			"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS",
+		},
+		AllowHeaders: []string{
+			"Origin", "Content-Type", "Accept", "Authorization", "X-Requested-With",
+		},
+		AllowCredentials: true,
+		ExposeHeaders: []string{
+			"Content-Length",
+		},
+	}))
 
 	// Setup routes with authentication
 	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, config.Auth.JWTSecret)
 
 	// Start server
 	log.Printf("Server starting on port %s", config.Server.Port)
-	log.Printf("Platform integration enabled - Available endpoints:")
-	log.Printf("  POST /api/content/validate")
-	log.Printf("  GET  /api/platforms/supported")
-	log.Printf("  POST /api/platforms/connect (auth required)")
-	log.Printf("  GET  /api/platforms (auth required)")
-	log.Printf("  POST /api/content (auth required)")
-	log.Printf("  GET  /api/content/live")
-	log.Printf("Midtrans payment integration enabled:")
-	log.Printf("  POST /api/midtrans/payment/:donationId (auth required)")
-	log.Printf("  POST /api/midtrans/webhook")
-	log.Printf("  GET  /api/midtrans/status/:orderId")
 	
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Server.Port)))
 }

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MediaShar - Midtrans Integration Test</title>
+    <script src="https://app.sandbox.midtrans.com/snap/snap.js" 
+            data-client-key="SB-Mid-client-Yy6kDu1ATcTYWiYy"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <style>
+        .api-response {
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+        .success { @apply bg-green-50 border-green-200 text-green-800; }
+        .error { @apply bg-red-50 border-red-200 text-red-800; }
+        .info { @apply bg-blue-50 border-blue-200 text-blue-800; }
+    </style>
+</head>
+<body class="bg-gray-100 min-h-screen">
+    <!-- Header -->
+    <header class="bg-white shadow-lg">
+        <div class="container mx-auto px-4 py-6">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-heart text-red-500 text-3xl"></i>
+                    <div>
+                        <h1 class="text-2xl font-bold text-gray-800">MediaShar</h1>
+                        <p class="text-gray-600">Midtrans Integration Testing</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <div id="connection-status" class="flex items-center space-x-2">
+                        <div class="w-3 h-3 bg-gray-400 rounded-full" id="status-indicator"></div>
+                        <span class="text-sm text-gray-600" id="status-text">Checking...</span>
+                    </div>
+                    <button onclick="checkHealth()" class="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition">
+                        <i class="fas fa-sync-alt mr-2"></i>Check Health
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Status Cards -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-blue-100 rounded-full">
+                        <i class="fas fa-server text-blue-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-800">API Status</h3>
+                        <p class="text-gray-600" id="api-status">Checking...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-green-100 rounded-full">
+                        <i class="fas fa-database text-green-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Database</h3>
+                        <p class="text-gray-600" id="db-status">Checking...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="bg-white rounded-lg shadow p-6">
+                <div class="flex items-center">
+                    <div class="p-3 bg-yellow-100 rounded-full">
+                        <i class="fas fa-credit-card text-yellow-600"></i>
+                    </div>
+                    <div class="ml-4">
+                        <h3 class="text-lg font-semibold text-gray-800">Midtrans</h3>
+                        <p class="text-gray-600" id="midtrans-status">Checking...</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <!-- Left Column: Controls -->
+            <div class="space-y-6">
+                <!-- Authentication Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-user-lock mr-2 text-blue-600"></i>
+                        Authentication
+                    </h2>
+                    
+                    <!-- Register Form -->
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-gray-700">Register New User</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="text" id="reg-username" placeholder="Username" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <input type="email" id="reg-email" placeholder="Email" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="password" id="reg-password" placeholder="Password" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <select id="reg-type" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="false">Donator</option>
+                                <option value="true">Streamer</option>
+                            </select>
+                        </div>
+                        <button onclick="registerUser()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-user-plus mr-2"></i>Register User
+                        </button>
+                    </div>
+
+                    <hr class="my-6">
+
+                    <!-- Login Form -->
+                    <div class="space-y-4">
+                        <h3 class="font-semibold text-gray-700">Login</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="email" id="login-email" placeholder="Email" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <input type="password" id="login-password" placeholder="Password" 
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        </div>
+                        <button onclick="loginUser()" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-sign-in-alt mr-2"></i>Login
+                        </button>
+                    </div>
+
+                    <!-- Quick Login Buttons -->
+                    <div class="mt-4 grid grid-cols-2 gap-4">
+                        <button onclick="quickLogin('streamer')" class="bg-purple-500 text-white py-2 rounded-lg hover:bg-purple-600 transition text-sm">
+                            <i class="fas fa-video mr-1"></i>Quick Login Streamer
+                        </button>
+                        <button onclick="quickLogin('donator')" class="bg-indigo-500 text-white py-2 rounded-lg hover:bg-indigo-600 transition text-sm">
+                            <i class="fas fa-hand-holding-heart mr-1"></i>Quick Login Donator
+                        </button>
+                    </div>
+
+                    <!-- User Info -->
+                    <div id="user-info" class="mt-4 p-4 bg-gray-50 rounded-lg hidden">
+                        <h4 class="font-semibold text-gray-700">Logged in as:</h4>
+                        <p class="text-sm text-gray-600" id="user-details"></p>
+                        <button onclick="logout()" class="mt-2 bg-red-500 text-white px-4 py-1 rounded text-sm hover:bg-red-600 transition">
+                            <i class="fas fa-sign-out-alt mr-1"></i>Logout
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Donation Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-heart mr-2 text-red-600"></i>
+                        Create Donation
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <input type="number" id="donation-amount" placeholder="Amount (IDR)" value="50000"
+                                   class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            <select id="donation-currency" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="IDR">IDR (Indonesian Rupiah)</option>
+                                <option value="USD">USD (US Dollar)</option>
+                            </select>
+                        </div>
+                        <input type="number" id="streamer-id" placeholder="Streamer ID" value="1"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <input type="text" id="donation-message" placeholder="Donation Message" value="Test donation from frontend"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <input type="text" id="display-name" placeholder="Display Name" value="Anonymous Supporter"
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <label class="flex items-center">
+                            <input type="checkbox" id="is-anonymous" class="mr-2">
+                            <span class="text-gray-700">Anonymous Donation</span>
+                        </label>
+                        <button onclick="createDonation()" class="w-full bg-red-500 text-white py-2 rounded-lg hover:bg-red-600 transition">
+                            <i class="fas fa-plus mr-2"></i>Create Donation
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Payment Section -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-credit-card mr-2 text-green-600"></i>
+                        Midtrans Payment
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <input type="number" id="payment-donation-id" placeholder="Donation ID" 
+                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <button onclick="createPayment()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-money-bill-wave mr-2"></i>Create Payment
+                        </button>
+                        <button onclick="openSnapPayment()" class="w-full bg-yellow-500 text-white py-2 rounded-lg hover:bg-yellow-600 transition" disabled id="snap-button">
+                            <i class="fas fa-external-link-alt mr-2"></i>Open Snap Payment
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Quick Actions -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-bolt mr-2 text-yellow-600"></i>
+                        Quick Actions
+                    </h2>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="fullFlowTest()" class="bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
+                            <i class="fas fa-play mr-2"></i>Full Flow Test
+                        </button>
+                        <button onclick="loadTestData()" class="bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
+                            <i class="fas fa-database mr-2"></i>Load Test Data
+                        </button>
+                        <button onclick="viewDonations()" class="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
+                            <i class="fas fa-list mr-2"></i>View Donations
+                        </button>
+                        <button onclick="clearLogs()" class="bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition">
+                            <i class="fas fa-trash mr-2"></i>Clear Logs
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Column: Logs and Responses -->
+            <div class="space-y-6">
+                <!-- API Response Log -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center justify-between">
+                        <span>
+                            <i class="fas fa-terminal mr-2 text-gray-600"></i>
+                            API Response Log
+                        </span>
+                        <button onclick="clearLogs()" class="text-sm bg-gray-500 text-white px-3 py-1 rounded hover:bg-gray-600 transition">
+                            Clear
+                        </button>
+                    </h2>
+                    <div id="api-log" class="api-response bg-gray-50 border rounded-lg p-4 text-sm font-mono">
+                        <div class="text-gray-500">API responses will appear here...</div>
+                    </div>
+                </div>
+
+                <!-- Current Session Data -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-memory mr-2 text-blue-600"></i>
+                        Session Data
+                    </h2>
+                    <div class="space-y-3">
+                        <div>
+                            <span class="font-semibold text-gray-700">JWT Token:</span>
+                            <div class="bg-gray-50 p-2 rounded text-xs font-mono break-all" id="current-token">Not logged in</div>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-700">Last Donation ID:</span>
+                            <div class="bg-gray-50 p-2 rounded text-sm" id="current-donation-id">None</div>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-700">Last Snap Token:</span>
+                            <div class="bg-gray-50 p-2 rounded text-xs font-mono break-all" id="current-snap-token">None</div>
+                        </div>
+                        <div>
+                            <span class="font-semibold text-gray-700">Last Order ID:</span>
+                            <div class="bg-gray-50 p-2 rounded text-sm" id="current-order-id">None</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Test Results -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-check-circle mr-2 text-green-600"></i>
+                        Test Results
+                    </h2>
+                    <div id="test-results" class="space-y-2">
+                        <div class="text-gray-500">Test results will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="notification" class="fixed top-4 right-4 p-4 rounded-lg shadow-lg hidden z-50">
+        <div class="flex items-center">
+            <i class="fas fa-info-circle mr-2" id="notification-icon"></i>
+            <span id="notification-message"></span>
+        </div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html> 

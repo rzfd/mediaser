@@ -1,370 +1,514 @@
-# Donation System for Streamers
+# MediaShar - Donation System Backend
 
-A backend service built with Go, Echo, and GORM to handle donations to streamers with JWT authentication.
+🚀 **Modern Go backend** untuk sistem donasi dengan integrasi **Midtrans payment gateway**, **Docker containerization**, dan **comprehensive testing**.
 
-## Features
+## 📋 Table of Contents
 
-- User management (streamers and donators)
-- JWT-based authentication and authorization
-- Donation processing with multiple payment providers
-- **QRIS (Quick Response Code Indonesian Standard) integration**
-- Payment webhooks handling
-- Donation analytics and statistics
-- Role-based access control (Streamer vs Donator)
-- QR Code generation for instant payments
+- [Features](#-features)
+- [Quick Start](#-quick-start)
+- [Development Commands](#-development-commands)
+- [Project Structure](#-project-structure)
+- [API Documentation](#-api-documentation)
+- [Testing](#-testing)
+- [Deployment](#-deployment)
+- [Contributing](#-contributing)
 
-## Architecture
+## ✨ Features
 
-The application follows a clean architecture pattern:
+### 🏗️ **Architecture**
+- **Clean Architecture** dengan separation of concerns
+- **Repository Pattern** untuk data access
+- **Service Layer** untuk business logic
+- **JWT Authentication** untuk security
+- **Middleware** untuk cross-cutting concerns
 
-- **Models**: Data structures and database schema
-- **Repository**: Database access layer
-- **Service**: Business logic layer
-- **Handler**: HTTP request handlers
-- **Routes**: API routing configuration
-- **Middleware**: JWT authentication and authorization
-- **Config**: Application configuration
+### 💳 **Payment Integration**
+- **Midtrans Snap** payment gateway
+- **Webhook handling** untuk payment notifications
+- **Multiple payment methods** support
+- **Transaction status tracking**
 
-## Project Structure
+### 🐳 **DevOps & Infrastructure**
+- **Docker containerization** dengan multi-stage builds
+- **Docker Compose** untuk local development
+- **Health checks** dan monitoring
+- **Automated testing** dengan comprehensive test suite
 
-```
-├── cmd/api/                 # Application entry point
-├── configs/                 # Configuration files
-├── internal/
-│   ├── models/             # Data models and database schema
-│   ├── repository/         # Database access layer
-│   ├── service/            # Business logic layer
-│   ├── handler/            # HTTP request handlers
-│   ├── middleware/         # JWT authentication middleware
-│   └── routes/             # API routing configuration
-├── pkg/utils/              # Utility functions
-├── docker-compose.yml      # Docker setup for PostgreSQL
-└── init.sql               # Database initialization script
-```
+### 📊 **Database & Storage**
+- **PostgreSQL** sebagai primary database
+- **GORM** untuk ORM dan migrations
+- **Database backup/restore** utilities
+- **Connection pooling** dan optimization
 
-## Setup
+## 🚀 Quick Start
 
 ### Prerequisites
 
-- Go 1.21 or higher
-- PostgreSQL database
-- Docker & Docker Compose (recommended, for easy setup)
-
-### Option 1: Full Docker Setup (Recommended)
-
-1. Clone the repository:
 ```bash
-git clone https://github.com/rzfd/mediashar.git
+# Check requirements
+make env-check
+```
+
+Required:
+- **Go 1.21+**
+- **Docker & Docker Compose**
+- **Git**
+
+### 1. Clone & Setup
+
+```bash
+git clone <repository-url>
 cd mediashar
 ```
 
-2. Start all services with Docker:
-```bash
-make docker-setup
-```
-
-3. Access the application:
-   - **API**: http://localhost:8080
-   - **pgAdmin**: http://localhost:8082 (admin@mediashar.com / admin123)
-   - **Adminer**: http://localhost:8081
-
-### Option 2: Development Setup (Database Only)
-
-1. Clone the repository:
-```bash
-git clone https://github.com/rzfd/mediashar.git
-cd mediashar
-```
-
-2. Start database services:
-```bash
-make dev-setup
-```
-
-3. Run the application locally:
-```bash
-make run
-```
-
-4. Access database admin panels:
-   - **pgAdmin**: http://localhost:8082 (admin@mediashar.com / admin123)
-   - **Adminer**: http://localhost:8081
-
-### Option 3: Manual PostgreSQL Setup
-
-1. Clone the repository:
-```bash
-git clone https://github.com/rzfd/mediashar.git
-cd mediashar
-```
-
-2. Install dependencies:
-```bash
-go mod download
-```
-
-3. Setup PostgreSQL database:
-```bash
-# Create database
-createdb donation_system
-
-# Or using psql
-psql -U postgres
-CREATE DATABASE donation_system;
-```
-
-4. Configure the application:
-
-Edit `configs/config.yaml` with your database settings:
-```yaml
-db:
-  host: "localhost"
-  port: "5432"
-  username: "postgres"
-  password: "your_password"
-  name: "donation_system"
-
-auth:
-  jwtSecret: "your-super-secret-jwt-key"
-  tokenExpiry: 86400  # 24 hours in seconds
-```
-
-5. Run the application:
-```bash
-go run cmd/api/main.go
-```
-
-## Database
-
-The application uses **PostgreSQL** as the primary database with the following configuration:
-
-- **Driver**: `gorm.io/driver/postgres`
-- **ORM**: GORM (Go Object-Relational Mapping)
-- **Default Port**: 5432
-- **Connection**: Uses pgx driver with SSL disabled for development
-
-### Database Schema
-
-The application will automatically create the following tables:
-- `users` - User information (streamers and donators)
-- `donations` - Donation records with payment information
-
-### Docker Services
-
-- **app**: Go application (port 8080)
-- **postgres**: PostgreSQL database (port 5432)
-- **pgadmin**: pgAdmin web interface (port 8082)
-- **adminer**: Adminer database admin (port 8081)
-
-## Authentication
-
-The API uses JWT (JSON Web Tokens) for authentication. Include the token in the Authorization header:
-
-```
-Authorization: Bearer <your-jwt-token>
-```
-
-### Token Claims
-
-JWT tokens contain the following claims:
-- `user_id`: User's unique identifier
-- `email`: User's email address
-- `is_streamer`: Boolean indicating if user is a streamer
-- `exp`: Token expiration time
-- `iat`: Token issued at time
-
-## API Endpoints
-
-### Authentication Endpoints (Public)
-
-- `POST /api/auth/register`: Register a new user account
-- `POST /api/auth/login`: Login and receive JWT token
-- `POST /api/auth/refresh`: Refresh an existing JWT token
-
-### Profile Management Endpoints (Protected)
-
-- `GET /api/auth/profile`: Get current user's profile
-- `PUT /api/auth/profile`: Update current user's profile
-- `POST /api/auth/change-password`: Change current user's password
-- `POST /api/auth/logout`: Logout (client-side token invalidation)
-
-### User Endpoints
-
-**Public:**
-- `GET /api/users/:id`: Get user by ID
-- `GET /api/streamers`: List all streamers
-
-**Protected:**
-- `POST /api/users`: Create a new user (admin)
-- `PUT /api/users/:id`: Update user information (self or admin)
-- `GET /api/users/:id/donations`: Get donations by user (as donator)
-
-### Donation Endpoints (Protected)
-
-- `POST /api/donations`: Create a new donation
-- `GET /api/donations`: List all donations
-- `GET /api/donations/:id`: Get donation by ID
-- `GET /api/donations/latest`: Get latest donations
-
-### Streamer-Only Endpoints (Protected + Streamer Role)
-
-- `GET /api/streamers/:id/donations`: Get donations for a streamer
-- `GET /api/streamers/:id/total`: Get total donation amount for a streamer
-
-### Payment Endpoints (Protected)
-
-- `POST /api/payments/process`: Process payment for a donation
-
-### QRIS Payment Endpoints
-
-**Public:**
-- `POST /api/qris/donate`: Create donation with QRIS QR code (anonymous or authenticated)
-
-**Protected:**
-- `POST /api/qris/donations/:id/generate`: Generate QRIS for existing donation
-- `GET /api/qris/status/:transaction_id`: Check QRIS payment status
-
-### Payment Webhook Endpoints (Public)
-
-- `POST /api/webhooks/paypal`: PayPal webhook handler
-- `POST /api/webhooks/stripe`: Stripe webhook handler
-- `POST /api/webhooks/crypto`: Crypto payment webhook handler
-- `POST /api/webhooks/qris`: QRIS payment webhook handler
-
-## Usage Examples
-
-### Register a new user
-```bash
-curl -X POST http://localhost:8080/api/auth/register \
-  -H "Content-Type: application/json" \
-  -d '{
-    "username": "streamer1",
-    "email": "streamer@example.com",
-    "password": "password123",
-    "full_name": "John Streamer",
-    "is_streamer": true,
-    "description": "Gaming streamer"
-  }'
-```
-
-### Login
-```bash
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{
-    "email": "streamer@example.com",
-    "password": "password123"
-  }'
-```
-
-### Access protected endpoint
-```bash
-curl -X GET http://localhost:8080/api/auth/profile \
-  -H "Authorization: Bearer <your-jwt-token>"
-```
-
-### Create a donation
-```bash
-curl -X POST http://localhost:8080/api/donations \
-  -H "Authorization: Bearer <your-jwt-token>" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 10.00,
-    "currency": "USD",
-    "message": "Great stream!",
-    "streamer_id": 1,
-    "display_name": "Anonymous"
-  }'
-```
-
-### Create donation with QRIS
-```bash
-curl -X POST http://localhost:8080/api/qris/donate \
-  -H "Content-Type: application/json" \
-  -d '{
-    "amount": 50000,
-    "currency": "IDR",
-    "message": "Semangat streaming!",
-    "streamer_id": 1,
-    "display_name": "Anonymous Supporter",
-    "is_anonymous": true
-  }'
-```
-
-## Development
-
-### Adding New Payment Providers
-
-To add a new payment provider:
-
-1. Implement the `PaymentProcessor` interface in a new file
-2. Register the processor in the `PaymentService`
-3. Add appropriate webhook handling in the `WebhookHandler`
-4. Add the webhook route in `internal/routes/routes.go`
-
-### Database Migrations
-
-Database migrations are handled automatically when the application starts using GORM's AutoMigrate feature.
-
-### Routes Organization
-
-All API routes are organized in the `internal/routes` package. Routes are grouped by:
-- **Public routes**: No authentication required
-- **Protected routes**: JWT authentication required
-- **Streamer-only routes**: JWT authentication + streamer role required
-- **Webhook routes**: No authentication (secured by webhook secrets)
-
-### JWT Middleware
-
-The application includes several middleware functions:
-- `JWTMiddleware`: Validates JWT tokens and extracts user info
-- `OptionalJWTMiddleware`: Optional JWT validation (doesn't fail if no token)
-- `StreamerOnlyMiddleware`: Ensures only streamers can access certain endpoints
-
-### Docker Commands
+### 2. Install Development Tools
 
 ```bash
-# Full setup (all services)
-make docker-setup
+make install-tools
+```
 
-# Development setup (database only)
-make dev-setup
+### 3. Start Services
 
-# Build Docker image
-make docker-build
+```bash
+# Start all services with Docker
+make up
 
-# Start all services
-make docker-up
+# Check status
+make status
+```
 
-# Start only database services
-make docker-db
+### 4. Run Tests
 
-# Stop services
-make docker-down
+```bash
+# Quick integration test
+make docker-test
+```
 
-# Stop and remove volumes
-make docker-clean
+## 🛠️ Development Commands
+
+### **Quick Commands**
+```bash
+make up          # Start all services
+make down        # Stop all services  
+make logs        # View application logs
+make status      # Check service status
+make restart     # Restart services
+```
+
+### **Development**
+```bash
+make build       # Build application binary
+make dev         # Run in development mode
+make watch       # Run with hot reload (requires air)
+make test        # Run all tests
+make fmt         # Format code
+make lint        # Run linter
+```
+
+### **Docker Operations**
+```bash
+make docker-build    # Build Docker containers
+make docker-up       # Start Docker services
+make docker-down     # Stop Docker services
+make docker-clean    # Clean containers & volumes
+make docker-logs     # View app logs
+make docker-exec     # Access app container
+```
+
+### **Testing & Integration**
+```bash
+make test            # Unit tests
+make test-coverage   # Tests with coverage
+make test-race       # Race condition tests
+make docker-test     # Full integration tests
+make midtrans-test   # Test Midtrans integration
+make health-check    # Check service health
+```
+
+### **Database**
+```bash
+make db-connect      # Connect to PostgreSQL
+make db-backup       # Backup database
+make db-restore      # Restore database
+make db-migrate-up   # Run migrations up
+make db-migrate-down # Run migrations down
+```
+
+### **Documentation & Setup**
+```bash
+make swagger         # Setup Swagger docs
+make platform        # Setup platform integration
+make docs            # Generate Go docs
+```
+
+### **Production**
+```bash
+make build-linux     # Build for Linux
+make production      # Build production image
+make deploy-check    # Check deployment readiness
+```
+
+### **Cleanup**
+```bash
+make clean           # Clean build artifacts
+make clean-all       # Clean everything
+```
+
+## 📁 Project Structure
+
+```
+mediashar/
+├── cmd/api/                 # Application entry point
+├── internal/
+│   ├── handler/            # HTTP handlers
+│   ├── service/            # Business logic interfaces
+│   │   └── serviceImpl/    # Service implementations
+│   ├── repository/         # Data access interfaces  
+│   │   └── repositoryImpl/ # Repository implementations
+│   ├── models/             # Domain models
+│   ├── middleware/         # HTTP middleware
+│   └── routes/             # Route definitions
+├── pkg/
+│   ├── config/             # Configuration management
+│   ├── database/           # Database utilities
+│   └── utils/              # Common utilities
+├── scripts/                # Automation scripts
+├── docs/                   # Documentation
+├── configs/                # Configuration files
+├── Dockerfile              # Container definition
+├── docker-compose.yml      # Multi-service setup
+└── Makefile               # Task automation
+```
+
+## 📚 API Documentation
+
+### **Available Services**
+- **API Server**: http://localhost:8080
+- **Swagger UI**: http://localhost:8083  
+- **PgAdmin**: http://localhost:8082
+- **Health Check**: http://localhost:8080/health
+
+### **Key Endpoints**
+
+#### Authentication
+```bash
+POST /api/auth/register     # User registration
+POST /api/auth/login        # User login
+```
+
+#### Users
+```bash
+GET  /api/users/profile     # Get current user profile
+GET  /api/users/:id         # Get user by ID
+GET  /api/streamers         # List streamers
+```
+
+#### Donations
+```bash
+POST /api/donations         # Create donation
+GET  /api/donations/:id     # Get donation
+GET  /api/donations         # List donations
+```
+
+#### Midtrans Payment
+```bash
+POST /api/midtrans/payment/:donationId  # Create payment
+POST /api/midtrans/webhook              # Payment webhook
+GET  /api/midtrans/status/:orderId      # Check status
+```
+
+## 🧪 Testing
+
+### **Test Types**
+
+1. **Unit Tests**
+   ```bash
+   make test
+   ```
+
+2. **Integration Tests**
+   ```bash
+   make docker-test
+   ```
+
+3. **Frontend Testing**
+   ```bash
+   make frontend-test      # Check frontend integration
+   make test-ui           # Quick frontend test
+   ```
+
+4. **Coverage Report**
+   ```bash
+   make test-coverage
+   # Opens coverage.html
+   ```
+
+5. **Race Condition Tests**
+   ```bash
+   make test-race
+   ```
+
+### **Visual Testing dengan Frontend Interface**
+
+#### **Quick Start Testing**
+```bash
+# Start complete environment
+make dev-full
+
+# Open frontend di browser
+make frontend-open
+# or manually: http://localhost:8000
+```
+
+#### **Automated Testing Workflow**
+1. **Open Frontend Interface**: http://localhost:8000
+2. **Click "Full Flow Test"** atau tekan `Ctrl+Enter`
+3. **Watch Automated Process**:
+   - ✅ Health check
+   - ✅ User registration & login
+   - ✅ Donation creation (75,000 IDR)
+   - ✅ Payment token generation
+4. **Manual Payment Test**: Click "Open Snap Payment"
+5. **Test Scenarios**:
+   - **Success**: Card `4811 1111 1111 1114`
+   - **Pending**: Card `4911 1111 1111 1113`
+   - **Failed**: Card `4411 1111 1111 1118`
+
+#### **Frontend Features**
+- **Real-time API monitoring** dengan colored logs
+- **Session management** dengan JWT token tracking
+- **Interactive forms** untuk testing scenarios
+- **Payment integration** dengan Midtrans Snap
+- **Health status dashboard** untuk service monitoring
+
+### **Manual Testing**
+
+```bash
+# Start services
+make up
+
+# Run comprehensive tests
+make docker-test
+
+# Test specific features
+make midtrans-test
+make health-check
+
+# Frontend integration test
+make frontend-test
+```
+
+### **Test Data**
+
+#### **Backend Test Data**
+Test script creates:
+- **Streamer user**: `streamer@mediashar.com`
+- **Donator user**: `donator@mediashar.com`
+- **Test donation**: 50,000 IDR
+- **Midtrans payment**: Sandbox environment
+
+#### **Frontend Test Accounts**
+Quick login credentials:
+- **Streamer**: `streamer@test.com` / `password123`
+- **Donator**: `donator@test.com` / `password123`
+
+#### **Midtrans Test Cards**
+```
+✅ SUCCESS: 4811 1111 1111 1114
+⏳ PENDING: 4911 1111 1111 1113  
+❌ FAILED:  4411 1111 1111 1118
+CVV: 123, Exp: 12/25
+```
+
+### **Testing Best Practices**
+
+1. **Start with Frontend Automated Test**:
+   ```bash
+   make frontend
+   # Open browser → Click "Full Flow Test"
+   ```
+
+2. **Verify Each Component**:
+   - API health check
+   - Database connectivity
+   - Midtrans configuration
+   - Authentication flow
+   - Payment processing
+
+3. **Test Edge Cases**:
+   - Invalid input data
+   - Network failures
+   - Payment failures
+   - Session expiration
+
+4. **Monitor Logs**:
+   - Frontend API response log
+   - Backend application logs: `make logs`
+   - Database connection status
+
+## 🚀 Deployment
+
+### **Environment Setup**
+
+1. **Production Environment**
+   ```bash
+   cp .env.example .env.production
+   # Edit production values
+   ```
+
+2. **Build Production Image**
+   ```bash
+   make production
+   ```
+
+3. **Deployment Check**
+   ```bash
+   make deploy-check
+   ```
+
+### **Environment Variables**
+
+```bash
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_USERNAME=postgres
+DB_PASSWORD=password
+DB_NAME=donation_system
+
+# Server
+SERVER_PORT=8080
+SERVER_ENV=production
+
+# Authentication
+JWT_SECRET=your-secret-key
+JWT_TOKEN_EXPIRY_HOURS=24
+
+# Midtrans (Production)
+MIDTRANS_MERCHANT_ID=your-merchant-id
+MIDTRANS_CLIENT_KEY=your-client-key
+MIDTRANS_SERVER_KEY=your-server-key
+MIDTRANS_ENVIRONMENT=production
+```
+
+### **Production Deployment**
+
+```bash
+# Build for production
+make build-linux
+
+# Or use Docker
+docker build -t mediashar:latest .
+docker run -p 8080:8080 --env-file .env.production mediashar:latest
+```
+
+## 🤝 Contributing
+
+### **Development Workflow**
+
+1. **Setup Development Environment**
+   ```bash
+   make install-tools
+   make up
+   ```
+
+2. **Make Changes**
+   ```bash
+   # Format code
+   make fmt
+   
+   # Run linter
+   make lint
+   
+   # Run tests
+   make test
+   ```
+
+3. **Test Integration**
+   ```bash
+   make docker-test
+   ```
+
+4. **Code Quality Checks**
+   ```bash
+   make check  # Runs fmt, vet, lint
+   ```
+
+### **Code Standards**
+
+- **Go formatting**: `gofmt` + `goimports`
+- **Linting**: `golangci-lint`
+- **Security**: `gosec`
+- **Testing**: Minimum 80% coverage
+- **Documentation**: Godoc comments
+
+### **Commit Guidelines**
+
+```bash
+feat: add Midtrans payment integration
+fix: resolve database connection issue  
+docs: update API documentation
+test: add integration tests for payments
+refactor: improve service layer structure
+```
+
+## 📞 Support
+
+### **Useful Commands**
+
+```bash
+# Show all available commands
+make help
+
+# Check environment
+make env-check
 
 # View logs
-make docker-logs
+make logs
 
-# Execute shell in app container
-make docker-shell
+# Access database
+make db-connect
 
-# Execute psql in postgres
-make docker-psql
+# Backup database
+make db-backup
 ```
 
-For detailed Docker documentation, see [docs/DOCKER_SETUP.md](docs/DOCKER_SETUP.md).
+### **Troubleshooting**
 
-## Security Considerations
+1. **Services not starting**
+   ```bash
+   make docker-clean
+   make up
+   ```
 
-- JWT tokens expire after 24 hours (configurable)
-- Passwords are hashed using bcrypt
-- CORS is enabled for cross-origin requests
-- SQL injection protection via GORM
-- Input validation on all endpoints
+2. **Database issues**
+   ```bash
+   make db-connect
+   # Check database manually
+   ```
 
-## License
+3. **Build issues**
+   ```bash
+   make clean
+   make deps
+   make build
+   ```
 
-MIT
+### **Documentation**
+
+- **API Docs**: http://localhost:8083 (Swagger)
+- **Code Docs**: `make docs` (Godoc)
+- **Docker Guide**: [docs/DOCKER_TESTING.md](docs/DOCKER_TESTING.md)
+- **Midtrans Guide**: [docs/MIDTRANS_INTEGRATION.md](docs/MIDTRANS_INTEGRATION.md)
+
+---
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 🙏 Acknowledgments
+
+- **Midtrans** untuk payment gateway integration
+- **Go community** untuk excellent tooling
+- **Docker** untuk containerization platform
