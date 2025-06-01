@@ -6,7 +6,7 @@ import (
 )
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler *handler.DonationHandler, webhookHandler *handler.WebhookHandler, authHandler *handler.AuthHandler, qrisHandler *handler.QRISHandler, jwtSecret string) {
+func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler *handler.DonationHandler, webhookHandler *handler.WebhookHandler, authHandler *handler.AuthHandler, qrisHandler *handler.QRISHandler, platformHandler *handler.PlatformHandler, jwtSecret string) {
 	// API group
 	api := e.Group("/api")
 
@@ -16,4 +16,5 @@ func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler
 	SetupDonationRoutes(api, donationHandler, jwtSecret)
 	SetupQRISRoutes(api, qrisHandler, jwtSecret)
 	SetupWebhookRoutes(api, webhookHandler, qrisHandler)
+	SetupPlatformRoutes(api, platformHandler, jwtSecret)
 } 

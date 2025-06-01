@@ -44,12 +44,14 @@ func main() {
 	// Initialize repository layer
 	donationRepo := repository.NewDonationRepository(db)
 	userRepo := repository.NewUserRepository(db)
+	platformRepo := repository.NewPlatformRepository(db)
 	
 	// Initialize service layer
 	donationService := service.NewDonationService(donationRepo)
 	userService := service.NewUserService(userRepo)
 	authService := service.NewAuthService(config.Auth.JWTSecret, config.Auth.TokenExpiry/3600) // Convert seconds to hours
 	qrisService := service.NewQRISService("MERCHANT123", "MediaShar Donation", donationService)
+	platformService := service.NewPlatformService()
 	
 	// Initialize payment service (with nil processors for now)
 	paymentService := service.NewPaymentService(config, donationService, nil, nil, nil)
@@ -60,6 +62,7 @@ func main() {
 	authHandler := handler.NewAuthHandler(userService, authService)
 	webhookHandler := handler.NewWebhookHandler(paymentService)
 	qrisHandler := handler.NewQRISHandler(qrisService, donationService)
+	platformHandler := handler.NewPlatformHandler(platformService, platformRepo)
 
 	// Initialize Echo
 	e := echo.New()
@@ -70,9 +73,17 @@ func main() {
 	e.Use(middleware.CORS())
 
 	// Setup routes with authentication
-	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, config.Auth.JWTSecret)
+	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, config.Auth.JWTSecret)
 
 	// Start server
 	log.Printf("Server starting on port %s", config.Server.Port)
+	log.Printf("Platform integration enabled - Available endpoints:")
+	log.Printf("  POST /api/content/validate")
+	log.Printf("  GET  /api/platforms/supported")
+	log.Printf("  POST /api/platforms/connect (auth required)")
+	log.Printf("  GET  /api/platforms (auth required)")
+	log.Printf("  POST /api/content (auth required)")
+	log.Printf("  GET  /api/content/live")
+	
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Server.Port)))
 }

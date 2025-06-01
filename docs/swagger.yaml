@@ -753,6 +753,416 @@ paths:
               schema:
                 $ref: '#/components/schemas/SuccessResponse'
 
+  # Platform Integration Endpoints
+  /platforms/supported:
+    get:
+      tags:
+        - Platform Integration
+      summary: Get supported platforms
+      description: Get list of supported social media platforms and their URL formats
+      security: []
+      responses:
+        '200':
+          description: Supported platforms retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        platform:
+                          type: string
+                          example: "youtube"
+                        name:
+                          type: string
+                          example: "YouTube"
+                        description:
+                          type: string
+                          example: "Videos, Live Streams, Shorts, Channels"
+                        url_formats:
+                          type: array
+                          items:
+                            type: string
+                          example: ["https://www.youtube.com/watch?v=VIDEO_ID", "https://youtu.be/VIDEO_ID"]
+
+  /platforms/connect:
+    post:
+      tags:
+        - Platform Integration
+      summary: Connect social media platform
+      description: Connect YouTube or TikTok account to MediaShar
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ConnectPlatformRequest'
+            examples:
+              youtube:
+                summary: Connect YouTube channel
+                value:
+                  platform_type: "youtube"
+                  channel_url: "https://www.youtube.com/@username"
+                  platform_username: "username"
+              tiktok:
+                summary: Connect TikTok account
+                value:
+                  platform_type: "tiktok"
+                  channel_url: "https://www.tiktok.com/@username"
+                  platform_username: "username"
+      responses:
+        '201':
+          description: Platform connected successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PlatformResponse'
+
+  /platforms:
+    get:
+      tags:
+        - Platform Integration
+      summary: Get connected platforms
+      description: Get list of connected social media platforms
+      responses:
+        '200':
+          description: Connected platforms retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/Platform'
+
+  /platforms/{id}:
+    get:
+      tags:
+        - Platform Integration
+      summary: Get platform by ID
+      description: Get specific platform connection by ID
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Platform ID
+      responses:
+        '200':
+          description: Platform retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: '#/components/schemas/Platform'
+        '404':
+          description: Platform not found
+
+  /content/validate:
+    post:
+      tags:
+        - Content Management
+      summary: Validate streaming URL
+      description: Validate and extract metadata from YouTube/TikTok URL
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: YouTube or TikTok URL to validate
+              example:
+                url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      responses:
+        '200':
+          description: URL validated successfully
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/URLValidationResponse'
+        '400':
+          description: Invalid URL or unsupported platform
+
+  /content:
+    post:
+      tags:
+        - Content Management
+      summary: Create streaming content
+      description: Create new streaming content entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - platform_id
+                - content_type
+                - content_id
+                - content_url
+              properties:
+                platform_id:
+                  type: integer
+                  description: Platform ID
+                content_type:
+                  type: string
+                  enum: [live, video, short]
+                  description: Type of content
+                content_id:
+                  type: string
+                  description: Platform-specific content ID
+                content_url:
+                  type: string
+                  format: uri
+                  description: Direct URL to content
+                title:
+                  type: string
+                  description: Content title
+                description:
+                  type: string
+                  description: Content description
+                thumbnail_url:
+                  type: string
+                  format: uri
+                  description: Thumbnail image URL
+                duration:
+                  type: integer
+                  description: Duration in seconds (null for live)
+                is_live:
+                  type: boolean
+                  description: Whether content is live
+              example:
+                platform_id: 1
+                content_type: "live"
+                content_id: "live_123"
+                content_url: "https://www.youtube.com/watch?v=live_123"
+                title: "Epic Gaming Stream"
+                is_live: true
+      responses:
+        '201':
+          description: Content created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Content created successfully"
+                  data:
+                    $ref: '#/components/schemas/StreamingContent'
+
+  /content/{id}:
+    get:
+      tags:
+        - Content Management
+      summary: Get content by ID
+      description: Get specific streaming content by ID
+      security: []
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Content ID
+      responses:
+        '200':
+          description: Content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: '#/components/schemas/StreamingContent'
+        '404':
+          description: Content not found
+
+  /content/by-url:
+    post:
+      tags:
+        - Content Management
+      summary: Get content by URL
+      description: Get streaming content by URL
+      security: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - url
+              properties:
+                url:
+                  type: string
+                  format: uri
+                  description: Content URL to search for
+              example:
+                url: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+      responses:
+        '200':
+          description: Content found successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    $ref: '#/components/schemas/StreamingContent'
+        '404':
+          description: Content not found
+
+  /content/live:
+    get:
+      tags:
+        - Content Management
+      summary: Get live content
+      description: Get all currently live streaming content
+      security: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            default: 1
+          description: Page number for pagination
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            default: 10
+            maximum: 100
+          description: Number of items per page
+      responses:
+        '200':
+          description: Live content retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/StreamingContent'
+
+  /content-donations:
+    post:
+      tags:
+        - Content Management
+      summary: Create content donation
+      description: Create a donation linked to specific content
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - donation_id
+                - content_url
+                - platform_type
+              properties:
+                donation_id:
+                  type: integer
+                  description: ID of the donation
+                content_url:
+                  type: string
+                  format: uri
+                  description: URL of the content
+                platform_type:
+                  type: string
+                  enum: [youtube, tiktok]
+                  description: Platform type
+              example:
+                donation_id: 1
+                content_url: "https://www.youtube.com/watch?v=123"
+                platform_type: "youtube"
+      responses:
+        '201':
+          description: Content donation created successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  message:
+                    type: string
+                    example: "Content donation created successfully"
+                  data:
+                    $ref: '#/components/schemas/ContentDonation'
+
+  /content-donations/donation/{donationId}:
+    get:
+      tags:
+        - Content Management
+      summary: Get content donations by donation ID
+      description: Get all content donations for a specific donation
+      parameters:
+        - name: donationId
+          in: path
+          required: true
+          schema:
+            type: integer
+          description: Donation ID
+      responses:
+        '200':
+          description: Content donations retrieved successfully
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "success"
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/ContentDonation'
+
 components:
   securitySchemes:
     BearerAuth:
@@ -1158,6 +1568,260 @@ components:
           type: string
           example: "Detailed error information"
 
+    # Platform Integration Schemas
+    ConnectPlatformRequest:
+      type: object
+      required:
+        - platform_type
+        - channel_url
+        - platform_username
+      properties:
+        platform_type:
+          type: string
+          enum: [youtube, tiktok]
+          description: Social media platform type
+        channel_url:
+          type: string
+          format: uri
+          description: Channel or profile URL
+        platform_username:
+          type: string
+          description: Username on the platform
+        auto_sync:
+          type: boolean
+          default: true
+          description: Automatically sync new content
+
+    Platform:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        platform_type:
+          type: string
+          enum: [youtube, tiktok]
+          example: "youtube"
+        platform_user_id:
+          type: string
+          example: "UC_sample_channel_id"
+        platform_username:
+          type: string
+          example: "sample_creator"
+        channel_url:
+          type: string
+          example: "https://www.youtube.com/@sample_creator"
+        channel_name:
+          type: string
+          example: "Sample Gaming Channel"
+        profile_image_url:
+          type: string
+          example: "https://example.com/avatar.jpg"
+        follower_count:
+          type: integer
+          example: 10000
+        is_verified:
+          type: boolean
+          example: true
+        is_active:
+          type: boolean
+          example: true
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
+    PlatformResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Platform connected successfully"
+        data:
+          $ref: '#/components/schemas/Platform'
+
+    StreamingContent:
+      type: object
+      properties:
+        id:
+          type: integer
+          example: 1
+        platform_id:
+          type: integer
+          example: 1
+        content_type:
+          type: string
+          enum: [live, video, short]
+          example: "live"
+        content_id:
+          type: string
+          example: "dQw4w9WgXcQ"
+        content_url:
+          type: string
+          example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        title:
+          type: string
+          example: "Live Gaming Stream"
+        description:
+          type: string
+          example: "Playing the latest games live!"
+        thumbnail_url:
+          type: string
+          example: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
+        duration:
+          type: integer
+          nullable: true
+          example: 3600
+        view_count:
+          type: integer
+          example: 1500
+        like_count:
+          type: integer
+          example: 150
+        is_live:
+          type: boolean
+          example: true
+        started_at:
+          type: string
+          format: date-time
+          nullable: true
+        ended_at:
+          type: string
+          format: date-time
+          nullable: true
+
+    URLValidationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        data:
+          type: object
+          properties:
+            is_valid:
+              type: boolean
+              example: true
+            platform:
+              type: string
+              enum: [youtube, tiktok]
+              example: "youtube"
+            content_type:
+              type: string
+              enum: [live, video, short, channel]
+              example: "video"
+            metadata:
+              type: object
+              properties:
+                title:
+                  type: string
+                  example: "Sample YouTube Video"
+                creator:
+                  type: string
+                  example: "Sample Creator"
+                thumbnail:
+                  type: string
+                  example: "https://img.youtube.com/vi/dQw4w9WgXcQ/maxresdefault.jpg"
+                duration:
+                  type: integer
+                  nullable: true
+                  example: 210
+                is_live:
+                  type: boolean
+                  example: false
+                view_count:
+                  type: integer
+                  example: 1000
+
+    ContentDonationRequest:
+      type: object
+      required:
+        - amount
+        - currency
+        - content_url
+      properties:
+        amount:
+          type: number
+          format: float
+          minimum: 0.01
+          example: 25.50
+        currency:
+          type: string
+          enum: [USD, IDR, EUR, GBP]
+          example: "USD"
+        message:
+          type: string
+          maxLength: 500
+          example: "Great content! Keep it up!"
+        content_url:
+          type: string
+          format: uri
+          description: YouTube or TikTok content URL
+          example: "https://www.youtube.com/watch?v=dQw4w9WgXcQ"
+        display_name:
+          type: string
+          maxLength: 100
+          example: "Anonymous Supporter"
+        is_anonymous:
+          type: boolean
+          default: false
+        payment_method:
+          type: string
+          enum: [qris, paypal, stripe]
+          default: "qris"
+
+    ContentDonationResponse:
+      type: object
+      properties:
+        status:
+          type: string
+          example: "success"
+        message:
+          type: string
+          example: "Donation created successfully"
+        data:
+          type: object
+          properties:
+            donation:
+              $ref: '#/components/schemas/Donation'
+            content:
+              $ref: '#/components/schemas/StreamingContent'
+            payment_info:
+              type: object
+              properties:
+                qr_code:
+                  type: string
+                  description: Base64 QR code (for QRIS)
+                  example: "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAA..."
+                transaction_id:
+                  type: string
+                  example: "TXN123456789"
+                payment_url:
+                  type: string
+                  description: Payment URL (for PayPal/Stripe)
+                  example: "https://paypal.com/checkout/123456"
+
+    ContentDonation:
+      type: object
+      properties:
+        donation_id:
+          type: integer
+        content_url:
+          type: string
+        platform_type:
+          type: string
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+
 tags:
   - name: Authentication
     description: User authentication and profile management
@@ -1170,4 +1834,8 @@ tags:
   - name: QRIS Payments
     description: QRIS payment integration for Indonesian market
   - name: Webhooks
-    description: Webhook endpoints for payment providers 
+    description: Webhook endpoints for payment providers
+  - name: Platform Integration
+    description: Social media platform integration endpoints
+  - name: Content Management
+    description: Streaming content management endpoints 
