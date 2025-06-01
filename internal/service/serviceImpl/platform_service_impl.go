@@ -1,4 +1,4 @@
-package service
+package serviceImpl
 
 import (
 	"fmt"
@@ -6,18 +6,19 @@ import (
 	"strings"
 
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/service"
 )
 
-type PlatformService struct {
+type platformService struct {
 	// Add any dependencies here (e.g., HTTP client for real API calls)
 }
 
-func NewPlatformService() *PlatformService {
-	return &PlatformService{}
+func NewPlatformService() service.PlatformService {
+	return &platformService{}
 }
 
 // ValidateURL validates and extracts metadata from YouTube/TikTok URLs
-func (s *PlatformService) ValidateURL(url string) (*models.PlatformValidationResult, error) {
+func (s *platformService) ValidateURL(url string) (*models.PlatformValidationResult, error) {
 	// YouTube URL patterns
 	youtubePatterns := []string{
 		`^https?://(?:www\.)?youtube\.com/watch\?v=([a-zA-Z0-9_-]{11})`,
@@ -60,7 +61,7 @@ func (s *PlatformService) ValidateURL(url string) (*models.PlatformValidationRes
 }
 
 // extractYouTubeMetadata extracts metadata from YouTube URLs
-func (s *PlatformService) extractYouTubeMetadata(url, pattern string) (*models.PlatformValidationResult, error) {
+func (s *platformService) extractYouTubeMetadata(url, pattern string) (*models.PlatformValidationResult, error) {
 	re := regexp.MustCompile(pattern)
 	matches := re.FindStringSubmatch(url)
 
@@ -111,7 +112,7 @@ func (s *PlatformService) extractYouTubeMetadata(url, pattern string) (*models.P
 }
 
 // extractTikTokMetadata extracts metadata from TikTok URLs
-func (s *PlatformService) extractTikTokMetadata(url, pattern string) (*models.PlatformValidationResult, error) {
+func (s *platformService) extractTikTokMetadata(url, pattern string) (*models.PlatformValidationResult, error) {
 	re := regexp.MustCompile(pattern)
 	matches := re.FindStringSubmatch(url)
 
@@ -163,7 +164,7 @@ func (s *PlatformService) extractTikTokMetadata(url, pattern string) (*models.Pl
 }
 
 // IsLiveStream checks if a URL represents a live stream
-func (s *PlatformService) IsLiveStream(url string) bool {
+func (s *platformService) IsLiveStream(url string) bool {
 	livePatterns := []string{
 		`youtube\.com/live/`,
 		`tiktok\.com/@[^/]+/live`,
@@ -178,18 +179,18 @@ func (s *PlatformService) IsLiveStream(url string) bool {
 }
 
 // GetPlatformFromURL extracts platform type from URL
-func (s *PlatformService) GetPlatformFromURL(url string) string {
+func (s *platformService) GetPlatformFromURL(url string) string {
 	if strings.Contains(url, "youtube.com") || strings.Contains(url, "youtu.be") {
 		return "youtube"
 	}
 	if strings.Contains(url, "tiktok.com") || strings.Contains(url, "vm.tiktok.com") {
 		return "tiktok"
 	}
-		return ""
-	}
-	
+	return ""
+}
+
 // GetContentTypeFromURL extracts content type from URL
-func (s *PlatformService) GetContentTypeFromURL(url string) string {
+func (s *platformService) GetContentTypeFromURL(url string) string {
 	if strings.Contains(url, "/live/") || strings.Contains(url, "/live") {
 		return "live"
 	}

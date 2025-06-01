@@ -17,4 +17,11 @@ payment:
   paypalClientID: "your-paypal-client-id"
   paypalClientSecret: "your-paypal-client-secret"
   stripeSecretKey: "your-stripe-secret-key"
-  webhookSecret: "your-webhook-secret" 
+  webhookSecret: "your-webhook-secret"
+
+midtrans:
+  merchantID: "G454372620"
+  clientKey: "SB-Mid-client-Yy6kDu1A1cTYWiYy"
+  serverKey: "SB-Mid-server-Zz8uCQ5-zrUcEbes_eijanu"
+  environment: "sandbox"  # sandbox or production
+  webhookSecret: ""  # Optional webhook secret 

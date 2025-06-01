@@ -16,9 +16,10 @@ const (
 type PaymentProvider string
 
 const (
-	PaymentProviderPaypal PaymentProvider = "paypal"
-	PaymentProviderStripe PaymentProvider = "stripe"
-	PaymentProviderCrypto PaymentProvider = "crypto"
+	PaymentProviderPaypal   PaymentProvider = "paypal"
+	PaymentProviderStripe   PaymentProvider = "stripe"
+	PaymentProviderCrypto   PaymentProvider = "crypto"
+	PaymentProviderMidtrans PaymentProvider = "midtrans"
 )
 
 // Donation represents a donation from a donator to a streamer

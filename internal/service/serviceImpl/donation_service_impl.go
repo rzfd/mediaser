@@ -1,4 +1,4 @@
-package service
+package serviceImpl
 
 import (
 	"errors"
@@ -6,38 +6,15 @@ import (
 
 	"github.com/rzfd/mediashar/internal/models"
 	"github.com/rzfd/mediashar/internal/repository"
+	"github.com/rzfd/mediashar/internal/service"
 )
-
-type CreateDonationRequest struct {
-	Amount      float64 `json:"amount"`
-	Currency    string  `json:"currency"`
-	Message     string  `json:"message"`
-	StreamerID  uint    `json:"streamer_id"`
-	DonatorID   *uint   `json:"donator_id,omitempty"`
-	DisplayName string  `json:"display_name"`
-	IsAnonymous bool    `json:"is_anonymous"`
-}
-
-type DonationService interface {
-	Create(donation *models.Donation) error
-	CreateDonation(req *CreateDonationRequest) (*models.Donation, error)
-	GetByID(id uint) (*models.Donation, error)
-	GetByTransactionID(transactionID string) (*models.Donation, error)
-	List(page, pageSize int) ([]*models.Donation, error)
-	GetByDonatorID(donatorID uint, page, pageSize int) ([]*models.Donation, error)
-	GetByStreamerID(streamerID uint, page, pageSize int) ([]*models.Donation, error)
-	UpdateStatus(id uint, status models.PaymentStatus) error
-	ProcessPayment(donationID uint, transactionID string, provider models.PaymentProvider) error
-	GetLatestDonations(limit int) ([]*models.Donation, error)
-	GetTotalAmountByStreamer(streamerID uint) (float64, error)
-}
 
 type donationService struct {
 	donationRepo repository.DonationRepository
 	userRepo     repository.UserRepository
 }
 
-func NewDonationService(donationRepo repository.DonationRepository) DonationService {
+func NewDonationService(donationRepo repository.DonationRepository) service.DonationService {
 	return &donationService{donationRepo: donationRepo}
 }
 
@@ -59,7 +36,7 @@ func (s *donationService) Create(donation *models.Donation) error {
 	return s.donationRepo.Create(donation)
 }
 
-func (s *donationService) CreateDonation(req *CreateDonationRequest) (*models.Donation, error) {
+func (s *donationService) CreateDonation(req *service.CreateDonationRequest) (*models.Donation, error) {
 	// Validate inputs
 	if req.Amount <= 0 {
 		return nil, errors.New("donation amount must be greater than zero")

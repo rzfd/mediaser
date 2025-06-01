@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	Server ServerConfig
-	DB     DBConfig
-	Auth   AuthConfig
-	Payment PaymentConfig
+	Server   ServerConfig
+	DB       DBConfig
+	Auth     AuthConfig
+	Payment  PaymentConfig
+	Midtrans MidtransConfig
 }
 
 type ServerConfig struct {
@@ -36,6 +37,14 @@ type PaymentConfig struct {
 	PaypalClientSecret string
 	StripeSecretKey    string
 	WebhookSecret      string
+}
+
+type MidtransConfig struct {
+	MerchantID    string
+	ClientKey     string
+	ServerKey     string
+	Environment   string // sandbox or production
+	WebhookSecret string
 }
 
 // LoadConfig loads configuration from config file and environment variables
@@ -77,6 +86,20 @@ func LoadConfig() (*Config, error) {
 	}
 	if os.Getenv("JWT_SECRET") != "" {
 		config.Auth.JWTSecret = os.Getenv("JWT_SECRET")
+	}
+	
+	// Midtrans environment variables
+	if os.Getenv("MIDTRANS_MERCHANT_ID") != "" {
+		config.Midtrans.MerchantID = os.Getenv("MIDTRANS_MERCHANT_ID")
+	}
+	if os.Getenv("MIDTRANS_CLIENT_KEY") != "" {
+		config.Midtrans.ClientKey = os.Getenv("MIDTRANS_CLIENT_KEY")
+	}
+	if os.Getenv("MIDTRANS_SERVER_KEY") != "" {
+		config.Midtrans.ServerKey = os.Getenv("MIDTRANS_SERVER_KEY")
+	}
+	if os.Getenv("MIDTRANS_ENVIRONMENT") != "" {
+		config.Midtrans.Environment = os.Getenv("MIDTRANS_ENVIRONMENT")
 	}
 
 	return config, nil

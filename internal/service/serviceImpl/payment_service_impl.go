@@ -1,41 +1,28 @@
-package service
+package serviceImpl
 
 import (
 	"errors"
 
 	"github.com/rzfd/mediashar/configs"
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/service"
 )
-
-// PaymentProcessor defines the interface for processing payments
-type PaymentProcessor interface {
-	ProcessPayment(amount float64, currency string, description string) (string, error)
-	VerifyPayment(transactionID string) (bool, error)
-	RefundPayment(transactionID string) error
-}
-
-// PaymentService handles payment processing for donations
-type PaymentService interface {
-	InitiatePayment(donation *models.Donation, provider models.PaymentProvider) (string, error)
-	VerifyPayment(transactionID string, provider models.PaymentProvider) (bool, error)
-	ProcessWebhook(payload []byte, provider models.PaymentProvider) (string, error)
-}
 
 type paymentService struct {
 	config             *configs.Config
-	donationService    DonationService
-	paypalProcessor    PaymentProcessor
-	stripeProcessor    PaymentProcessor
-	cryptoProcessor    PaymentProcessor
+	donationService    service.DonationService
+	paypalProcessor    service.PaymentProcessor
+	stripeProcessor    service.PaymentProcessor
+	cryptoProcessor    service.PaymentProcessor
 }
 
 func NewPaymentService(
 	config *configs.Config,
-	donationService DonationService,
-	paypalProcessor PaymentProcessor,
-	stripeProcessor PaymentProcessor,
-	cryptoProcessor PaymentProcessor,
-) PaymentService {
+	donationService service.DonationService,
+	paypalProcessor service.PaymentProcessor,
+	stripeProcessor service.PaymentProcessor,
+	cryptoProcessor service.PaymentProcessor,
+) service.PaymentService {
 	return &paymentService{
 		config:             config,
 		donationService:    donationService,
@@ -48,7 +35,7 @@ func NewPaymentService(
 func (s *paymentService) InitiatePayment(donation *models.Donation, provider models.PaymentProvider) (string, error) {
 	description := "Donation to " + donation.Streamer.Username
 
-	var processor PaymentProcessor
+	var processor service.PaymentProcessor
 	switch provider {
 	case models.PaymentProviderPaypal:
 		processor = s.paypalProcessor
@@ -71,7 +58,7 @@ func (s *paymentService) InitiatePayment(donation *models.Donation, provider mod
 }
 
 func (s *paymentService) VerifyPayment(transactionID string, provider models.PaymentProvider) (bool, error) {
-	var processor PaymentProcessor
+	var processor service.PaymentProcessor
 	switch provider {
 	case models.PaymentProviderPaypal:
 		processor = s.paypalProcessor

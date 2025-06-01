@@ -1,4 +1,4 @@
-package service
+package serviceImpl
 
 import (
 	"errors"
@@ -6,26 +6,15 @@ import (
 
 	"github.com/rzfd/mediashar/internal/models"
 	"github.com/rzfd/mediashar/internal/repository"
+	"github.com/rzfd/mediashar/internal/service"
 	"golang.org/x/crypto/bcrypt"
 )
-
-type UserService interface {
-	Create(user *models.User) error
-	GetByID(id uint) (*models.User, error)
-	GetByUsername(username string) (*models.User, error)
-	GetByEmail(email string) (*models.User, error)
-	Update(user *models.User) error
-	Delete(id uint) error
-	List(page, pageSize int) ([]*models.User, error)
-	GetStreamers(page, pageSize int) ([]*models.User, error)
-	Authenticate(email, password string) (*models.User, error)
-}
 
 type userService struct {
 	userRepo repository.UserRepository
 }
 
-func NewUserService(userRepo repository.UserRepository) UserService {
+func NewUserService(userRepo repository.UserRepository) service.UserService {
 	return &userService{userRepo: userRepo}
 }
 

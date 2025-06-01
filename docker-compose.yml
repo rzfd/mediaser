@@ -50,19 +50,45 @@ services:
     ports:
       - "8080:8080"
     environment:
+      # Database Configuration
       - DB_HOST=postgres
       - DB_PORT=5432
-      - DB_USER=postgres
+      - DB_USERNAME=postgres
       - DB_PASSWORD=password
       - DB_NAME=donation_system
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      
+      # Server Configuration
       - SERVER_PORT=8080
+      - SERVER_ENV=development
+      
+      # Authentication
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_TOKEN_EXPIRY_HOURS=24
+      
+      # Midtrans Configuration (Sandbox)
+      - MIDTRANS_MERCHANT_ID=G454372620
+      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
+      - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEbes_eijanu
+      - MIDTRANS_ENVIRONMENT=sandbox
+      
+      # Payment Configuration (Optional)
+      - PAYPAL_CLIENT_ID=your-paypal-client-id
+      - PAYPAL_CLIENT_SECRET=your-paypal-client-secret
+      - STRIPE_SECRET_KEY=your-stripe-secret-key
+      - WEBHOOK_SECRET=your-webhook-secret-key
     depends_on:
       postgres:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - mediashar_network
+    # Add health check for the app
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
@@ -87,6 +113,18 @@ services:
     restart: unless-stopped
     networks:
       - mediashar_network
+
+  # Testing tools
+  curl:
+    image: curlimages/curl:latest
+    container_name: mediashar_test_client
+    networks:
+      - mediashar_network
+    depends_on:
+      - app
+    command: ["tail", "-f", "/dev/null"]  # Keep container running
+    profiles:
+      - testing  # Only start when testing profile is used
 
 volumes:
   postgres_data:

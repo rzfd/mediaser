@@ -1,26 +1,16 @@
-package repository
+package repositoryImpl
 
 import (
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/repository"
 	"gorm.io/gorm"
 )
-
-type UserRepository interface {
-	Create(user *models.User) error
-	GetByID(id uint) (*models.User, error)
-	GetByUsername(username string) (*models.User, error)
-	GetByEmail(email string) (*models.User, error)
-	Update(user *models.User) error
-	Delete(id uint) error
-	List(offset, limit int) ([]*models.User, error)
-	GetStreamers(offset, limit int) ([]*models.User, error)
-}
 
 type userRepository struct {
 	db *gorm.DB
 }
 
-func NewUserRepository(db *gorm.DB) UserRepository {
+func NewUserRepository(db *gorm.DB) repository.UserRepository {
 	return &userRepository{db: db}
 }
 

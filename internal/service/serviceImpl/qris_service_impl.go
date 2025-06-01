@@ -1,4 +1,4 @@
-package service
+package serviceImpl
 
 import (
 	"encoding/base64"
@@ -7,45 +7,25 @@ import (
 
 	"github.com/skip2/go-qrcode"
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/service"
 )
 
-type QRISService interface {
-	GenerateQRIS(donation *models.Donation) (*QRISResponse, error)
-	ValidateQRISPayment(qrisID string) (*QRISPaymentStatus, error)
-	ProcessQRISCallback(payload []byte) error
-}
-
-type QRISResponse struct {
-	QRISString string `json:"qris_string"`
-	QRCodeBase64 string `json:"qr_code_base64"`
-	ExpiryTime time.Time `json:"expiry_time"`
-	Amount float64 `json:"amount"`
-	TransactionID string `json:"transaction_id"`
-}
-
-type QRISPaymentStatus struct {
-	Status string `json:"status"`
-	TransactionID string `json:"transaction_id"`
-	Amount float64 `json:"amount"`
-	PaidAt *time.Time `json:"paid_at,omitempty"`
-}
-
 type qrisService struct {
-	merchantID string
-	merchantName string
-	donationService DonationService
+	merchantID      string
+	merchantName    string
+	donationService service.DonationService
 }
 
-func NewQRISService(merchantID, merchantName string, donationService DonationService) QRISService {
+func NewQRISService(merchantID, merchantName string, donationService service.DonationService) service.QRISService {
 	return &qrisService{
-		merchantID: merchantID,
-		merchantName: merchantName,
+		merchantID:      merchantID,
+		merchantName:    merchantName,
 		donationService: donationService,
 	}
 }
 
 // GenerateQRIS generates QRIS string and QR code for donation
-func (s *qrisService) GenerateQRIS(donation *models.Donation) (*QRISResponse, error) {
+func (s *qrisService) GenerateQRIS(donation *models.Donation) (*service.QRISResponse, error) {
 	// Generate transaction ID
 	transactionID := fmt.Sprintf("DON-%d-%d", donation.ID, time.Now().Unix())
 	
@@ -65,11 +45,11 @@ func (s *qrisService) GenerateQRIS(donation *models.Donation) (*QRISResponse, er
 	// Set expiry time (15 minutes)
 	expiryTime := time.Now().Add(15 * time.Minute)
 	
-	return &QRISResponse{
-		QRISString: qrisString,
-		QRCodeBase64: qrCodeBase64,
-		ExpiryTime: expiryTime,
-		Amount: donation.Amount,
+	return &service.QRISResponse{
+		QRISString:    qrisString,
+		QRCodeBase64:  qrCodeBase64,
+		ExpiryTime:    expiryTime,
+		Amount:        donation.Amount,
 		TransactionID: transactionID,
 	}, nil
 }
@@ -116,15 +96,15 @@ func (s *qrisService) generateQRISString(amount float64, transactionID, descript
 }
 
 // ValidateQRISPayment checks payment status from payment provider
-func (s *qrisService) ValidateQRISPayment(qrisID string) (*QRISPaymentStatus, error) {
+func (s *qrisService) ValidateQRISPayment(qrisID string) (*service.QRISPaymentStatus, error) {
 	// In production, this would call the actual payment provider API
 	// For now, return a mock response
 	
-	return &QRISPaymentStatus{
-		Status: "pending", // pending, paid, expired, failed
+	return &service.QRISPaymentStatus{
+		Status:        "pending", // pending, paid, expired, failed
 		TransactionID: qrisID,
-		Amount: 0,
-		PaidAt: nil,
+		Amount:        0,
+		PaidAt:        nil,
 	}, nil
 }
 

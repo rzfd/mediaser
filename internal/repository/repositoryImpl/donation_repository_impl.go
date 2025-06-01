@@ -1,29 +1,16 @@
-package repository
+package repositoryImpl
 
 import (
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/repository"
 	"gorm.io/gorm"
 )
-
-type DonationRepository interface {
-	Create(donation *models.Donation) error
-	GetByID(id uint) (*models.Donation, error)
-	GetByTransactionID(transactionID string) (*models.Donation, error)
-	Update(donation *models.Donation) error
-	Delete(id uint) error
-	List(offset, limit int) ([]*models.Donation, error)
-	GetByDonatorID(donatorID uint, offset, limit int) ([]*models.Donation, error)
-	GetByStreamerID(streamerID uint, offset, limit int) ([]*models.Donation, error)
-	UpdateStatus(id uint, status models.PaymentStatus) error
-	GetLatestDonations(limit int) ([]*models.Donation, error)
-	GetTotalAmountByStreamer(streamerID uint) (float64, error)
-}
 
 type donationRepository struct {
 	db *gorm.DB
 }
 
-func NewDonationRepository(db *gorm.DB) DonationRepository {
+func NewDonationRepository(db *gorm.DB) repository.DonationRepository {
 	return &donationRepository{db: db}
 }
 

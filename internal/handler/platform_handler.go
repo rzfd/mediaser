@@ -12,11 +12,11 @@ import (
 )
 
 type PlatformHandler struct {
-	platformService *service.PlatformService
+	platformService service.PlatformService
 	platformRepo    repository.PlatformRepository
 }
 
-func NewPlatformHandler(platformService *service.PlatformService, platformRepo repository.PlatformRepository) *PlatformHandler {
+func NewPlatformHandler(platformService service.PlatformService, platformRepo repository.PlatformRepository) *PlatformHandler {
 	return &PlatformHandler{
 		platformService: platformService,
 		platformRepo:    platformRepo,

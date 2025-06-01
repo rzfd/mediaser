@@ -20,12 +20,20 @@ func NewDonationHandler(donationService service.DonationService) *DonationHandle
 
 // CreateDonation creates a new donation
 func (h *DonationHandler) CreateDonation(c echo.Context) error {
-	var donation models.Donation
-	if err := c.Bind(&donation); err != nil {
+	var req service.CreateDonationRequest
+	if err := c.Bind(&req); err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid request", err))
 	}
 
-	if err := h.donationService.Create(&donation); err != nil {
+	// Get donator ID from JWT token
+	userID, ok := c.Get("user_id").(uint)
+	if ok {
+		req.DonatorID = &userID
+	}
+
+	// Create donation using service method
+	donation, err := h.donationService.CreateDonation(&req)
+	if err != nil {
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse("Failed to create donation", err))
 	}
 

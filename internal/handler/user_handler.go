@@ -22,6 +22,24 @@ func NewUserHandler(userService service.UserService, donationService service.Don
 	}
 }
 
+// GetProfile gets the current user profile from JWT token
+func (h *UserHandler) GetProfile(c echo.Context) error {
+	userID, ok := c.Get("user_id").(uint)
+	if !ok {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Invalid token", nil))
+	}
+
+	user, err := h.userService.GetByID(userID)
+	if err != nil {
+		return c.JSON(http.StatusNotFound, utils.ErrorResponse("User not found", err))
+	}
+
+	// Don't return password
+	user.Password = ""
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse("Profile retrieved successfully", user))
+}
+
 // CreateUser creates a new user (admin only or public registration)
 func (h *UserHandler) CreateUser(c echo.Context) error {
 	var user models.User

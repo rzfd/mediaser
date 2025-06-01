@@ -1,4 +1,4 @@
-package service
+package serviceImpl
 
 import (
 	"time"
@@ -6,20 +6,15 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/rzfd/mediashar/internal/middleware"
 	"github.com/rzfd/mediashar/internal/models"
+	"github.com/rzfd/mediashar/internal/service"
 )
-
-type AuthService interface {
-	GenerateToken(user *models.User) (string, error)
-	ValidateToken(tokenString string) (*middleware.JWTClaims, error)
-	RefreshToken(tokenString string) (string, error)
-}
 
 type authService struct {
 	jwtSecret   string
 	tokenExpiry time.Duration
 }
 
-func NewAuthService(jwtSecret string, tokenExpiryHours int) AuthService {
+func NewAuthService(jwtSecret string, tokenExpiryHours int) service.AuthService {
 	return &authService{
 		jwtSecret:   jwtSecret,
 		tokenExpiry: time.Duration(tokenExpiryHours) * time.Hour,

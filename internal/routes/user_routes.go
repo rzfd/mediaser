@@ -14,6 +14,7 @@ func SetupUserRoutes(api *echo.Group, userHandler *handler.UserHandler, jwtSecre
 
 	// Protected user routes (authentication required)
 	protectedUsers := api.Group("/users", middleware.JWTMiddleware(jwtSecret))
+	protectedUsers.GET("/profile", userHandler.GetProfile)
 	protectedUsers.POST("", userHandler.CreateUser)
 	protectedUsers.PUT("/:id", userHandler.UpdateUser)
 	protectedUsers.GET("/:id/donations", userHandler.GetUserDonations)
