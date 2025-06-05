@@ -12,6 +12,7 @@ import (
 	"github.com/rzfd/mediashar/internal/repository/repositoryImpl"
 	"github.com/rzfd/mediashar/internal/routes"
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
+	grpcServer "github.com/rzfd/mediashar/internal/grpc"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
@@ -57,6 +58,18 @@ func main() {
 	// Initialize payment service (with nil processors for now)
 	paymentService := serviceImpl.NewPaymentService(config, donationService, nil, nil, nil)
 	
+	// Initialize gRPC services
+	notificationService := grpcServer.NewMockNotificationService()
+	
+	// Start gRPC server in a separate goroutine
+	go func() {
+		grpcSrv := grpcServer.NewGRPCServer(donationService, paymentService, notificationService)
+		log.Printf("Starting gRPC server on port 9090")
+		if err := grpcSrv.Start("9090"); err != nil {
+			log.Printf("Failed to start gRPC server: %v", err)
+		}
+	}()
+	
 	// Initialize handler layer
 	donationHandler := handler.NewDonationHandler(donationService)
 	userHandler := handler.NewUserHandler(userService, donationService)
@@ -97,8 +110,10 @@ func main() {
 	// Setup routes with authentication
 	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, config.Auth.JWTSecret)
 
-	// Start server
-	log.Printf("Server starting on port %s", config.Server.Port)
+	// Start HTTP server
+	log.Printf("HTTP server starting on port %s", config.Server.Port)
+	log.Printf("gRPC server available on port 9090")
+	log.Printf("Application supports both REST (HTTP) and gRPC protocols")
 	
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Server.Port)))
 }

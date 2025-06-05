@@ -1,7 +1,7 @@
 # MediaShar Project Makefile
 # Comprehensive task automation for Go backend with Docker and Midtrans integration
 
-.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test midtrans-test production check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open
+.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test midtrans-test production check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open proto-install proto-gen proto-clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -455,4 +455,24 @@ status-full: ## Show complete system status
 	@$(DOCKER_COMPOSE) exec postgres pg_isready -U postgres 2>/dev/null && echo "$(GREEN)✅ Database ready$(NC)" || echo "$(RED)❌ Database not ready$(NC)"
 	@echo ""
 	@echo "$(BLUE)📋 Environment Info:$(NC)"
-	@$(MAKE) env-check 
+	@$(MAKE) env-check
+
+# Proto generation
+proto-install:
+	@echo "📦 Installing protoc and Go plugins..."
+	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	@echo "✅ Proto tools installed"
+
+proto-gen:
+	@echo "🔧 Generating protobuf files..."
+	@mkdir -p pkg/pb
+	protoc --go_out=. --go_opt=module=github.com/rzfd/mediashar \
+		   --go-grpc_out=. --go-grpc_opt=module=github.com/rzfd/mediashar \
+		   proto/*.proto
+	@echo "✅ Protobuf files generated"
+
+proto-clean:
+	@echo "🧹 Cleaning generated proto files..."
+	@rm -rf pkg/pb/*.pb.go
+	@echo "✅ Proto files cleaned" 

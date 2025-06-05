@@ -1,0 +1,237 @@
+syntax = "proto3";
+
+package donation;
+
+option go_package = "github.com/rzfd/mediashar/pkg/pb";
+
+import "google/protobuf/timestamp.proto";
+
+// Donation service definition
+service DonationService {
+  // Create a new donation
+  rpc CreateDonation(CreateDonationRequest) returns (CreateDonationResponse);
+  
+  // Get donation by ID
+  rpc GetDonation(GetDonationRequest) returns (GetDonationResponse);
+  
+  // Get donations by streamer
+  rpc GetDonationsByStreamer(GetDonationsByStreamerRequest) returns (GetDonationsListResponse);
+  
+  // Update donation status
+  rpc UpdateDonationStatus(UpdateDonationStatusRequest) returns (UpdateDonationStatusResponse);
+  
+  // Stream donation events (real-time notifications)
+  rpc StreamDonationEvents(StreamDonationEventsRequest) returns (stream DonationEvent);
+  
+  // Get donation statistics
+  rpc GetDonationStats(GetDonationStatsRequest) returns (GetDonationStatsResponse);
+}
+
+// Payment service definition for microservices
+service PaymentService {
+  // Process payment for donation
+  rpc ProcessPayment(ProcessPaymentRequest) returns (ProcessPaymentResponse);
+  
+  // Verify payment status
+  rpc VerifyPayment(VerifyPaymentRequest) returns (VerifyPaymentResponse);
+  
+  // Handle payment webhook
+  rpc HandleWebhook(HandleWebhookRequest) returns (HandleWebhookResponse);
+}
+
+// Notification service for real-time updates
+service NotificationService {
+  // Send donation notification
+  rpc SendDonationNotification(SendNotificationRequest) returns (SendNotificationResponse);
+  
+  // Subscribe to donation events
+  rpc SubscribeDonationEvents(SubscribeEventsRequest) returns (stream DonationEvent);
+}
+
+// Messages
+message CreateDonationRequest {
+  double amount = 1;
+  string currency = 2;
+  string message = 3;
+  uint32 streamer_id = 4;
+  uint32 donator_id = 5;
+  string display_name = 6;
+  bool is_anonymous = 7;
+  string payment_method = 8;
+}
+
+message CreateDonationResponse {
+  uint32 donation_id = 1;
+  string transaction_id = 2;
+  string payment_url = 3;
+  string qr_code_base64 = 4;
+  google.protobuf.Timestamp expires_at = 5;
+}
+
+message GetDonationRequest {
+  uint32 donation_id = 1;
+}
+
+message GetDonationResponse {
+  Donation donation = 1;
+}
+
+message GetDonationsByStreamerRequest {
+  uint32 streamer_id = 1;
+  int32 page = 2;
+  int32 page_size = 3;
+}
+
+message GetDonationsListResponse {
+  repeated Donation donations = 1;
+  int32 total_count = 2;
+  int32 current_page = 3;
+  int32 total_pages = 4;
+}
+
+message UpdateDonationStatusRequest {
+  uint32 donation_id = 1;
+  PaymentStatus status = 2;
+  string transaction_id = 3;
+}
+
+message UpdateDonationStatusResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message ProcessPaymentRequest {
+  uint32 donation_id = 1;
+  PaymentProvider provider = 2;
+  map<string, string> payment_data = 3;
+}
+
+message ProcessPaymentResponse {
+  string transaction_id = 1;
+  string payment_url = 2;
+  string qr_code = 3;
+  PaymentStatus status = 4;
+}
+
+message VerifyPaymentRequest {
+  string transaction_id = 1;
+  PaymentProvider provider = 2;
+}
+
+message VerifyPaymentResponse {
+  bool is_verified = 1;
+  PaymentStatus status = 2;
+  double amount = 3;
+}
+
+message HandleWebhookRequest {
+  PaymentProvider provider = 1;
+  bytes payload = 2;
+  map<string, string> headers = 3;
+}
+
+message HandleWebhookResponse {
+  bool success = 1;
+  string transaction_id = 2;
+  string message = 3;
+}
+
+message StreamDonationEventsRequest {
+  uint32 streamer_id = 1;
+}
+
+message DonationEvent {
+  EventType type = 1;
+  Donation donation = 2;
+  google.protobuf.Timestamp timestamp = 3;
+  map<string, string> metadata = 4;
+}
+
+message SendNotificationRequest {
+  uint32 user_id = 1;
+  NotificationType type = 2;
+  string title = 3;
+  string message = 4;
+  map<string, string> data = 5;
+}
+
+message SendNotificationResponse {
+  bool success = 1;
+  string notification_id = 2;
+}
+
+message SubscribeEventsRequest {
+  uint32 user_id = 1;
+  repeated EventType event_types = 2;
+}
+
+message GetDonationStatsRequest {
+  uint32 streamer_id = 1;
+  google.protobuf.Timestamp start_date = 2;
+  google.protobuf.Timestamp end_date = 3;
+}
+
+message GetDonationStatsResponse {
+  double total_amount = 1;
+  int32 total_donations = 2;
+  double average_amount = 3;
+  repeated DonationStat daily_stats = 4;
+}
+
+message DonationStat {
+  string date = 1;
+  double amount = 2;
+  int32 count = 3;
+}
+
+// Data models
+message Donation {
+  uint32 id = 1;
+  double amount = 2;
+  string currency = 3;
+  string message = 4;
+  uint32 streamer_id = 5;
+  uint32 donator_id = 6;
+  string display_name = 7;
+  bool is_anonymous = 8;
+  PaymentStatus status = 9;
+  PaymentProvider payment_provider = 10;
+  string transaction_id = 11;
+  google.protobuf.Timestamp created_at = 12;
+  google.protobuf.Timestamp updated_at = 13;
+  google.protobuf.Timestamp payment_time = 14;
+}
+
+// Enums
+enum PaymentStatus {
+  PAYMENT_STATUS_UNSPECIFIED = 0;
+  PAYMENT_STATUS_PENDING = 1;
+  PAYMENT_STATUS_COMPLETED = 2;
+  PAYMENT_STATUS_FAILED = 3;
+  PAYMENT_STATUS_CANCELLED = 4;
+  PAYMENT_STATUS_REFUNDED = 5;
+}
+
+enum PaymentProvider {
+  PAYMENT_PROVIDER_UNSPECIFIED = 0;
+  PAYMENT_PROVIDER_MIDTRANS = 1;
+  PAYMENT_PROVIDER_PAYPAL = 2;
+  PAYMENT_PROVIDER_STRIPE = 3;
+  PAYMENT_PROVIDER_QRIS = 4;
+  PAYMENT_PROVIDER_CRYPTO = 5;
+}
+
+enum EventType {
+  EVENT_TYPE_UNSPECIFIED = 0;
+  EVENT_TYPE_DONATION_CREATED = 1;
+  EVENT_TYPE_DONATION_COMPLETED = 2;
+  EVENT_TYPE_DONATION_FAILED = 3;
+  EVENT_TYPE_PAYMENT_VERIFIED = 4;
+}
+
+enum NotificationType {
+  NOTIFICATION_TYPE_UNSPECIFIED = 0;
+  NOTIFICATION_TYPE_DONATION_RECEIVED = 1;
+  NOTIFICATION_TYPE_PAYMENT_COMPLETED = 2;
+  NOTIFICATION_TYPE_PAYMENT_FAILED = 3;
+} 
