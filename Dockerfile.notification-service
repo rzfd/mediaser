@@ -1,0 +1,43 @@
+# Notification Service Dockerfile
+FROM golang:1.23-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install dependencies
+RUN apk add --no-cache git
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the notification service
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o notification-service ./cmd/notification-service
+
+# Final stage
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS and net-tools for health checks
+RUN apk --no-cache add ca-certificates tzdata net-tools
+
+# Set timezone
+RUN cp /usr/share/zoneinfo/Asia/Jakarta /etc/localtime
+
+WORKDIR /root/
+
+# Copy the binary from builder stage
+COPY --from=builder /app/notification-service .
+
+# Copy config files
+COPY --from=builder /app/configs ./configs
+
+# Expose port
+EXPOSE 9093
+
+# Run the service
+CMD ["./notification-service"] 

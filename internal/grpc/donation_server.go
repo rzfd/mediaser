@@ -2,6 +2,7 @@ package grpc
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"google.golang.org/grpc/codes"
@@ -28,7 +29,6 @@ func NewDonationGRPCServer(donationService service.DonationService) *DonationGRP
 
 // CreateDonation creates a new donation via gRPC
 func (s *DonationGRPCServer) CreateDonation(ctx context.Context, req *pb.CreateDonationRequest) (*pb.CreateDonationResponse, error) {
-	// Convert gRPC request to service request
 	createReq := &service.CreateDonationRequest{
 		Amount:      req.Amount,
 		Currency:    req.Currency,
@@ -39,8 +39,8 @@ func (s *DonationGRPCServer) CreateDonation(ctx context.Context, req *pb.CreateD
 	}
 
 	// Set donator ID if provided
-	if req.DonatorId != nil {
-		donatorID := uint(*req.DonatorId)
+	if req.DonatorId != 0 {
+		donatorID := uint(req.DonatorId)
 		createReq.DonatorID = &donatorID
 	}
 
@@ -110,9 +110,9 @@ func (s *DonationGRPCServer) GetDonationsByStreamer(ctx context.Context, req *pb
 
 // UpdateDonationStatus updates the status of a donation
 func (s *DonationGRPCServer) UpdateDonationStatus(ctx context.Context, req *pb.UpdateDonationStatusRequest) (*pb.UpdateDonationStatusResponse, error) {
-	status := convertPbToModelPaymentStatus(req.Status)
+	paymentStatus := convertPbToModelPaymentStatus(req.Status)
 	
-	err := s.donationService.UpdateStatus(uint(req.DonationId), status)
+	err := s.donationService.UpdateStatus(uint(req.DonationId), paymentStatus)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "failed to update donation status: %v", err)
 	}
@@ -234,13 +234,28 @@ func convertModelToPbPaymentProvider(provider models.PaymentProvider) pb.Payment
 		return pb.PaymentProvider_PAYMENT_PROVIDER_PAYPAL
 	case models.PaymentProviderStripe:
 		return pb.PaymentProvider_PAYMENT_PROVIDER_STRIPE
-	case models.PaymentProviderQRIS:
+	case "QRIS":
 		return pb.PaymentProvider_PAYMENT_PROVIDER_QRIS
 	default:
 		return pb.PaymentProvider_PAYMENT_PROVIDER_UNSPECIFIED
 	}
 }
 
+func convertPbToModelPaymentProvider(provider pb.PaymentProvider) models.PaymentProvider {
+	switch provider {
+	case pb.PaymentProvider_PAYMENT_PROVIDER_MIDTRANS:
+		return models.PaymentProviderMidtrans
+	case pb.PaymentProvider_PAYMENT_PROVIDER_PAYPAL:
+		return models.PaymentProviderPaypal
+	case pb.PaymentProvider_PAYMENT_PROVIDER_STRIPE:
+		return models.PaymentProviderStripe
+	case pb.PaymentProvider_PAYMENT_PROVIDER_QRIS:
+		return "QRIS"
+	default:
+		return models.PaymentProviderMidtrans
+	}
+}
+
 func generateTransactionID(donationID uint) string {
-	return "GRPC-DON-" + string(rune(donationID)) + "-" + string(rune(time.Now().Unix()))
+	return fmt.Sprintf("TXN-%d-%d", donationID, time.Now().Unix())
 } 

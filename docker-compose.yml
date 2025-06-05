@@ -1,19 +1,17 @@
-version: '3.8'
-
 services:
-  postgres:
+  # Databases for each microservice
+  gateway-db:
     image: postgres:15-alpine
-    container_name: mediashar_postgres
+    container_name: mediashar_gateway_db
     environment:
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-      POSTGRES_DB: donation_system
+      POSTGRES_DB: gateway_db
       POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - gateway_data:/var/lib/postgresql/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
@@ -23,6 +21,213 @@ services:
     networks:
       - mediashar_network
 
+  donation-db:
+    image: postgres:15-alpine
+    container_name: mediashar_donation_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: donation_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5433:5432"
+    volumes:
+      - donation_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mediashar_network
+
+  payment-db:
+    image: postgres:15-alpine
+    container_name: mediashar_payment_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: payment_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5434:5432"
+    volumes:
+      - payment_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mediashar_network
+
+  # Microservices
+  donation-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.donation-service
+    container_name: mediashar_donation_service
+    ports:
+      - "9091:9091"
+    environment:
+      # Database Configuration
+      - DONATION_DB_HOST=donation-db
+      - DONATION_DB_PORT=5432
+      - DONATION_DB_USERNAME=postgres
+      - DONATION_DB_PASSWORD=password
+      - DONATION_DB_NAME=donation_db
+      
+      # Service Configuration
+      - GRPC_PORT=9091
+      - SERVICE_NAME=donation-service
+    depends_on:
+      donation-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep :9091 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  payment-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.payment-service
+    container_name: mediashar_payment_service
+    ports:
+      - "9092:9092"
+    environment:
+      # Database Configuration
+      - PAYMENT_DB_HOST=payment-db
+      - PAYMENT_DB_PORT=5432
+      - PAYMENT_DB_USERNAME=postgres
+      - PAYMENT_DB_PASSWORD=password
+      - PAYMENT_DB_NAME=payment_db
+      
+      # Service Configuration
+      - GRPC_PORT=9092
+      - SERVICE_NAME=payment-service
+      
+      # Midtrans Configuration
+      - MIDTRANS_MERCHANT_ID=G454372620
+      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
+      - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu
+      - MIDTRANS_ENVIRONMENT=sandbox
+    depends_on:
+      payment-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep :9092 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  notification-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.notification-service
+    container_name: mediashar_notification_service
+    ports:
+      - "9093:9093"
+    environment:
+      # Service Configuration
+      - GRPC_PORT=9093
+      - SERVICE_NAME=notification-service
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep :9093 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # API Gateway
+  api-gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.api-gateway
+    container_name: mediashar_api_gateway
+    ports:
+      - "8080:8080"
+    environment:
+      # Database Configuration (for user management)
+      - DB_HOST=gateway-db
+      - DB_PORT=5432
+      - DB_USERNAME=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=gateway_db
+      
+      # Server Configuration
+      - SERVER_PORT=8080
+      - SERVER_ENV=development
+      
+      # Authentication
+      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
+      - JWT_TOKEN_EXPIRY_HOURS=24
+      
+      # Microservices URLs
+      - DONATION_SERVICE_URL=donation-service:9091
+      - PAYMENT_SERVICE_URL=payment-service:9092
+      - NOTIFICATION_SERVICE_URL=notification-service:9093
+    depends_on:
+      gateway-db:
+        condition: service_healthy
+      donation-service:
+        condition: service_healthy
+      payment-service:
+        condition: service_healthy
+      notification-service:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Frontend
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      target: production
+    container_name: mediashar_frontend
+    ports:
+      - "8000:80"
+    environment:
+      - NGINX_HOST=localhost
+      - NGINX_PORT=80
+    depends_on:
+      api-gateway:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    volumes:
+      - frontend_logs:/var/log/nginx
+
+  # pgAdmin for database management
   pgadmin:
     image: dpage/pgadmin4:latest
     container_name: mediashar_pgadmin
@@ -35,95 +240,16 @@ services:
       - "8082:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-      - ./pgadmin/servers.json:/pgadmin4/servers.json
+      - ./pgadmin/servers-microservices.json:/pgadmin4/servers.json
     depends_on:
-      - postgres
+      - gateway-db
+      - donation-db
+      - payment-db
     restart: unless-stopped
     networks:
       - mediashar_network
 
-  app:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: mediashar_app
-    ports:
-      - "8080:8080"
-      - "9090:9090"  # gRPC port
-    environment:
-      # Database Configuration
-      - DB_HOST=postgres
-      - DB_PORT=5432
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=password
-      - DB_NAME=donation_system
-      
-      # Server Configuration
-      - SERVER_PORT=8080
-      - SERVER_ENV=development
-      
-      # gRPC Configuration
-      - GRPC_PORT=9090
-      - GRPC_REFLECTION_ENABLED=true
-      
-      # Authentication
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      - JWT_TOKEN_EXPIRY_HOURS=24
-      
-      # Midtrans Configuration (Sandbox) - User's valid credentials
-      - MIDTRANS_MERCHANT_ID=G454372620
-      - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
-      - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu
-      - MIDTRANS_ENVIRONMENT=sandbox
-      
-      # Payment Configuration (Optional)
-      - PAYPAL_CLIENT_ID=your-paypal-client-id
-      - PAYPAL_CLIENT_SECRET=your-paypal-client-secret
-      - STRIPE_SECRET_KEY=your-stripe-secret-key
-      - WEBHOOK_SECRET=your-webhook-secret-key
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - mediashar_network
-    # Add health check for the app
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
-
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-      target: production
-    container_name: mediashar_frontend
-    ports:
-      - "8000:80"
-    environment:
-      # Frontend configuration
-      - NGINX_HOST=localhost
-      - NGINX_PORT=80
-    depends_on:
-      app:
-        condition: service_healthy
-    restart: unless-stopped
-    networks:
-      - mediashar_network
-    # Health check for frontend
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost/health"]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-      start_period: 10s
-    volumes:
-      # Optional: Mount logs for debugging
-      - frontend_logs:/var/log/nginx
-
+  # Swagger UI for API documentation
   swagger-ui:
     image: swaggerapi/swagger-ui:latest
     container_name: mediashar_swagger
@@ -148,21 +274,10 @@ services:
     networks:
       - mediashar_network
 
-  # Testing tools
-  curl:
-    image: curlimages/curl:latest
-    container_name: mediashar_test_client
-    networks:
-      - mediashar_network
-    depends_on:
-      - app
-      - frontend
-    command: ["tail", "-f", "/dev/null"]  # Keep container running
-    profiles:
-      - testing  # Only start when testing profile is used
-
 volumes:
-  postgres_data:
+  gateway_data:
+  donation_data:
+  payment_data:
   pgadmin_data:
   frontend_logs:
 

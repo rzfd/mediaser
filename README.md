@@ -1,514 +1,391 @@
-# MediaShar - Donation System Backend
+# MediaShar - Microservices Donation Platform
 
-🚀 **Modern Go backend** untuk sistem donasi dengan integrasi **Midtrans payment gateway**, **Docker containerization**, dan **comprehensive testing**.
+MediaShar adalah platform donasi modern untuk content creator yang dibangun dengan **microservices architecture** untuk scalability dan maintainability yang optimal.
 
-## 📋 Table of Contents
+## 🚀 Microservices Architecture
 
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [Development Commands](#-development-commands)
-- [Project Structure](#-project-structure)
-- [API Documentation](#-api-documentation)
-- [Testing](#-testing)
-- [Deployment](#-deployment)
-- [Contributing](#-contributing)
-
-## ✨ Features
-
-### 🏗️ **Architecture**
-- **Clean Architecture** dengan separation of concerns
-- **Repository Pattern** untuk data access
-- **Service Layer** untuk business logic
-- **JWT Authentication** untuk security
-- **Middleware** untuk cross-cutting concerns
-
-### 💳 **Payment Integration**
-- **Midtrans Snap** payment gateway
-- **Webhook handling** untuk payment notifications
-- **Multiple payment methods** support
-- **Transaction status tracking**
-
-### 🐳 **DevOps & Infrastructure**
-- **Docker containerization** dengan multi-stage builds
-- **Docker Compose** untuk local development
-- **Health checks** dan monitoring
-- **Automated testing** dengan comprehensive test suite
-
-### 📊 **Database & Storage**
-- **PostgreSQL** sebagai primary database
-- **GORM** untuk ORM dan migrations
-- **Database backup/restore** utilities
-- **Connection pooling** dan optimization
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-```bash
-# Check requirements
-make env-check
+```
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           API GATEWAY                                      │
+│                         (REST API + gRPC Client)                          │
+│                              Port: 8080                                    │
+└─┬─────────┬─────────────┬───────────────────────────────────────────────────┘
+  │         │             │
+┌─▼─────┐ ┌─▼─────────┐ ┌─▼─────────────┐
+│Donation│ │  Payment  │ │ Notification  │
+│Service │ │  Service  │ │   Service     │
+│:9091   │ │   :9092   │ │     :9093     │
+└─┬─────┘ └─┬─────────┘ └───────────────┘
+  │         │
+┌─▼─────┐ ┌─▼─────────┐     ┌─────────────┐
+│Donation│ │  Payment  │     │ Gateway DB  │
+│   DB   │ │    DB     │     │   :5432     │
+│ :5433  │ │   :5434   │     └─────────────┘
+└───────┘ └───────────┘
 ```
 
-Required:
-- **Go 1.21+**
-- **Docker & Docker Compose**
-- **Git**
-
-### 1. Clone & Setup
+## ⚡ Quick Start
 
 ```bash
-git clone <repository-url>
+# Clone repository
+git clone https://github.com/rzfd/mediashar.git
 cd mediashar
-```
 
-### 2. Install Development Tools
+# Start microservices
+./scripts/start-microservices.sh start
 
-```bash
-make install-tools
-```
-
-### 3. Start Services
-
-```bash
-# Start all services with Docker
+# Or using Makefile
 make up
 
-# Check status
-make status
+# Access application
+open http://localhost:8080
 ```
 
-### 4. Run Tests
+## 🚀 Features
 
-```bash
-# Quick integration test
-make docker-test
-```
+### Core Features
+- 🎁 **Donation Management**: Create, track, and manage donations
+- 💳 **Multi-Payment Support**: Midtrans, PayPal, Stripe, QRIS
+- 👤 **User Management**: Registration, authentication, profiles
+- 📱 **Platform Integration**: YouTube, TikTok content sync
+- 🔔 **Real-time Notifications**: Live donation alerts
+- 📊 **Analytics Dashboard**: Donation statistics and reports
 
-## 🛠️ Development Commands
+### Technical Features  
+- 🏗️ **Microservices Architecture**: Scalable distributed system
+- 🔄 **gRPC Communication**: High-performance inter-service calls
+- 🗄️ **Database Per Service**: Isolated databases for each microservice
+- 🔒 **JWT Authentication**: Secure API access
+- 🐳 **Docker Support**: Containerized deployment
+- 📚 **API Documentation**: Swagger/OpenAPI specs
+- 🧪 **Health Checks**: Service monitoring and status
+- ⚖️ **Load Balancing**: Horizontal scaling capability
 
-### **Quick Commands**
-```bash
-make up          # Start all services
-make down        # Stop all services  
-make logs        # View application logs
-make status      # Check service status
-make restart     # Restart services
-```
+## 🛠️ Technology Stack
 
-### **Development**
-```bash
-make build       # Build application binary
-make dev         # Run in development mode
-make watch       # Run with hot reload (requires air)
-make test        # Run all tests
-make fmt         # Format code
-make lint        # Run linter
-```
+### Backend
+- **Language**: Go 1.21+
+- **Framework**: Echo (REST API)
+- **Communication**: gRPC
+- **Database**: PostgreSQL 15 (per service)
+- **Authentication**: JWT
+- **ORM**: GORM
 
-### **Docker Operations**
-```bash
-make docker-build    # Build Docker containers
-make docker-up       # Start Docker services
-make docker-down     # Stop Docker services
-make docker-clean    # Clean containers & volumes
-make docker-logs     # View app logs
-make docker-exec     # Access app container
-```
+### Infrastructure
+- **Containerization**: Docker + Docker Compose
+- **Reverse Proxy**: Nginx
+- **Database Admin**: pgAdmin
+- **API Docs**: Swagger UI
+- **Monitoring**: Built-in health checks
 
-### **Testing & Integration**
-```bash
-make test            # Unit tests
-make test-coverage   # Tests with coverage
-make test-race       # Race condition tests
-make docker-test     # Full integration tests
-make midtrans-test   # Test Midtrans integration
-make health-check    # Check service health
-```
-
-### **Database**
-```bash
-make db-connect      # Connect to PostgreSQL
-make db-backup       # Backup database
-make db-restore      # Restore database
-make db-migrate-up   # Run migrations up
-make db-migrate-down # Run migrations down
-```
-
-### **Documentation & Setup**
-```bash
-make swagger         # Setup Swagger docs
-make platform        # Setup platform integration
-make docs            # Generate Go docs
-```
-
-### **Production**
-```bash
-make build-linux     # Build for Linux
-make production      # Build production image
-make deploy-check    # Check deployment readiness
-```
-
-### **Cleanup**
-```bash
-make clean           # Clean build artifacts
-make clean-all       # Clean everything
-```
+### External Services
+- **Payment**: Midtrans, PayPal, Stripe
+- **Media**: YouTube API, TikTok API
+- **QRIS**: Bank payment integration
 
 ## 📁 Project Structure
 
 ```
 mediashar/
-├── cmd/api/                 # Application entry point
+├── cmd/
+│   ├── api-gateway/            # API Gateway (main entry point)
+│   ├── donation-service/       # Donation microservice
+│   ├── payment-service/        # Payment microservice
+│   └── notification-service/   # Notification microservice
 ├── internal/
-│   ├── handler/            # HTTP handlers
-│   ├── service/            # Business logic interfaces
-│   │   └── serviceImpl/    # Service implementations
-│   ├── repository/         # Data access interfaces  
-│   │   └── repositoryImpl/ # Repository implementations
-│   ├── models/             # Domain models
-│   ├── middleware/         # HTTP middleware
-│   └── routes/             # Route definitions
+│   ├── handler/               # HTTP handlers
+│   ├── service/               # Business logic
+│   ├── repository/            # Data access layer
+│   ├── models/                # Data models
+│   ├── grpc/                  # gRPC servers
+│   └── routes/                # Route definitions
+├── proto/                     # Protocol buffer definitions
 ├── pkg/
-│   ├── config/             # Configuration management
-│   ├── database/           # Database utilities
-│   └── utils/              # Common utilities
-├── scripts/                # Automation scripts
-├── docs/                   # Documentation
-├── configs/                # Configuration files
-├── Dockerfile              # Container definition
-├── docker-compose.yml      # Multi-service setup
-└── Makefile               # Task automation
+│   ├── pb/                    # Generated protobuf files
+│   └── utils/                 # Utilities
+├── configs/                   # Configuration files
+├── scripts/                   # Deployment scripts
+├── docs/                      # Documentation
+├── docker-compose.microservices.yml  # Microservices setup
+└── Makefile                   # Build commands
 ```
 
-## 📚 API Documentation
+## 🔧 Development Setup
 
-### **Available Services**
-- **API Server**: http://localhost:8080
-- **Swagger UI**: http://localhost:8083  
-- **PgAdmin**: http://localhost:8082
-- **Health Check**: http://localhost:8080/health
-
-### **Key Endpoints**
-
-#### Authentication
+### Prerequisites
 ```bash
-POST /api/auth/register     # User registration
-POST /api/auth/login        # User login
+# Install Go 1.21+
+wget https://go.dev/dl/go1.21.0.linux-amd64.tar.gz
+sudo tar -C /usr/local -xzf go1.21.0.linux-amd64.tar.gz
+
+# Install Docker & Docker Compose
+sudo apt install docker.io docker-compose
+
+# Install development tools
+sudo apt install make curl jq
+
+# Install protobuf compiler
+sudo apt install protobuf-compiler
 ```
 
-#### Users
+### Local Development
+
 ```bash
-GET  /api/users/profile     # Get current user profile
-GET  /api/users/:id         # Get user by ID
-GET  /api/streamers         # List streamers
+# Install protobuf tools
+make proto-install
+
+# Generate protobuf files
+make proto-gen
+
+# Start all microservices
+make up
+
+# Or step by step
+make db-setup      # Start databases first
+make docker-build  # Build services
+make up           # Start services
 ```
 
-#### Donations
+## 🐳 Docker Commands
+
 ```bash
-POST /api/donations         # Create donation
-GET  /api/donations/:id     # Get donation
-GET  /api/donations         # List donations
+make up          # Start microservices
+make down        # Stop microservices
+make logs        # View all logs
+make logs-service SERVICE=donation-service  # Specific service
+make restart     # Restart all services
+make rebuild     # Rebuild and restart
+make status      # Show system status
 ```
 
-#### Midtrans Payment
-```bash
-POST /api/midtrans/payment/:donationId  # Create payment
-POST /api/midtrans/webhook              # Payment webhook
-GET  /api/midtrans/status/:orderId      # Check status
-```
+## 🌐 Service URLs
+
+| Service | Port | URL | Protocol | Description |
+|---------|------|-----|----------|-------------|
+| **API Gateway** | 8080 | `http://localhost:8080` | HTTP/REST | Main API endpoint |
+| **Donation Service** | 9091 | `localhost:9091` | gRPC | Donation management |
+| **Payment Service** | 9092 | `localhost:9092` | gRPC | Payment processing |
+| **Notification Service** | 9093 | `localhost:9093` | gRPC | Real-time notifications |
+| **Frontend** | 8000 | `http://localhost:8000` | HTTP | Web interface |
+| **pgAdmin** | 8082 | `http://localhost:8082` | HTTP | Database admin |
+| **Swagger UI** | 8083 | `http://localhost:8083` | HTTP | API documentation |
+
+### Database Ports
+| Database | Port | Connection |
+|----------|------|------------|
+| **Gateway DB** | 5432 | `postgresql://postgres:password@localhost:5432/gateway_db` |
+| **Donation DB** | 5433 | `postgresql://postgres:password@localhost:5433/donation_db` |
+| **Payment DB** | 5434 | `postgresql://postgres:password@localhost:5434/payment_db` |
 
 ## 🧪 Testing
 
-### **Test Types**
-
-1. **Unit Tests**
-   ```bash
-   make test
-   ```
-
-2. **Integration Tests**
-   ```bash
-   make docker-test
-   ```
-
-3. **Frontend Testing**
-   ```bash
-   make frontend-test      # Check frontend integration
-   make test-ui           # Quick frontend test
-   ```
-
-4. **Coverage Report**
-   ```bash
-   make test-coverage
-   # Opens coverage.html
-   ```
-
-5. **Race Condition Tests**
-   ```bash
-   make test-race
-   ```
-
-### **Visual Testing dengan Frontend Interface**
-
-#### **Quick Start Testing**
+### API Testing
 ```bash
-# Start complete environment
-make dev-full
+# Health check
+curl http://localhost:8080/health
 
-# Open frontend di browser
-make frontend-open
-# or manually: http://localhost:8000
+# Service health
+curl http://localhost:8080/services/health
+
+# API endpoints
+curl -X POST http://localhost:8080/api/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"username":"test","email":"test@example.com","password":"password123"}'
 ```
 
-#### **Automated Testing Workflow**
-1. **Open Frontend Interface**: http://localhost:8000
-2. **Click "Full Flow Test"** atau tekan `Ctrl+Enter`
-3. **Watch Automated Process**:
-   - ✅ Health check
-   - ✅ User registration & login
-   - ✅ Donation creation (75,000 IDR)
-   - ✅ Payment token generation
-4. **Manual Payment Test**: Click "Open Snap Payment"
-5. **Test Scenarios**:
-   - **Success**: Card `4811 1111 1111 1114`
-   - **Pending**: Card `4911 1111 1111 1113`
-   - **Failed**: Card `4411 1111 1111 1118`
-
-#### **Frontend Features**
-- **Real-time API monitoring** dengan colored logs
-- **Session management** dengan JWT token tracking
-- **Interactive forms** untuk testing scenarios
-- **Payment integration** dengan Midtrans Snap
-- **Health status dashboard** untuk service monitoring
-
-### **Manual Testing**
-
+### gRPC Testing
 ```bash
-# Start services
-make up
+# Install grpcurl
+go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 
-# Run comprehensive tests
-make docker-test
+# Test services
+make test-grpc
 
-# Test specific features
-make midtrans-test
-make health-check
-
-# Frontend integration test
-make frontend-test
+# Manual testing
+grpcurl -plaintext localhost:9091 list
+grpcurl -plaintext localhost:9091 pb.DonationService.GetDonationStats
 ```
 
-### **Test Data**
-
-#### **Backend Test Data**
-Test script creates:
-- **Streamer user**: `streamer@mediashar.com`
-- **Donator user**: `donator@mediashar.com`
-- **Test donation**: 50,000 IDR
-- **Midtrans payment**: Sandbox environment
-
-#### **Frontend Test Accounts**
-Quick login credentials:
-- **Streamer**: `streamer@test.com` / `password123`
-- **Donator**: `donator@test.com` / `password123`
-
-#### **Midtrans Test Cards**
-```
-✅ SUCCESS: 4811 1111 1111 1114
-⏳ PENDING: 4911 1111 1111 1113  
-❌ FAILED:  4411 1111 1111 1118
-CVV: 123, Exp: 12/25
-```
-
-### **Testing Best Practices**
-
-1. **Start with Frontend Automated Test**:
-   ```bash
-   make frontend
-   # Open browser → Click "Full Flow Test"
-   ```
-
-2. **Verify Each Component**:
-   - API health check
-   - Database connectivity
-   - Midtrans configuration
-   - Authentication flow
-   - Payment processing
-
-3. **Test Edge Cases**:
-   - Invalid input data
-   - Network failures
-   - Payment failures
-   - Session expiration
-
-4. **Monitor Logs**:
-   - Frontend API response log
-   - Backend application logs: `make logs`
-   - Database connection status
-
-## 🚀 Deployment
-
-### **Environment Setup**
-
-1. **Production Environment**
-   ```bash
-   cp .env.example .env.production
-   # Edit production values
-   ```
-
-2. **Build Production Image**
-   ```bash
-   make production
-   ```
-
-3. **Deployment Check**
-   ```bash
-   make deploy-check
-   ```
-
-### **Environment Variables**
-
+### Load Testing
 ```bash
-# Database
-DB_HOST=localhost
-DB_PORT=5432
-DB_USERNAME=postgres
-DB_PASSWORD=password
-DB_NAME=donation_system
+# Test API Gateway
+ab -n 1000 -c 10 http://localhost:8080/health
 
-# Server
-SERVER_PORT=8080
-SERVER_ENV=production
-
-# Authentication
-JWT_SECRET=your-secret-key
-JWT_TOKEN_EXPIRY_HOURS=24
-
-# Midtrans (Production)
-MIDTRANS_MERCHANT_ID=your-merchant-id
-MIDTRANS_CLIENT_KEY=your-client-key
-MIDTRANS_SERVER_KEY=your-server-key
-MIDTRANS_ENVIRONMENT=production
+# Test gRPC service
+ghz --insecure --proto proto/donation.proto \
+    --call pb.DonationService.GetDonationStats \
+    -d '{"streamer_id": 1}' -n 1000 -c 10 localhost:9091
 ```
 
-### **Production Deployment**
+## 🏗️ Microservices Details
 
+### 1. **API Gateway** (Port: 8080)
+- **Role**: Main entry point for all REST API requests
+- **Database**: Gateway DB (User management, Auth, Platform data)
+- **Technology**: Echo Framework + gRPC Client
+- **Features**:
+  - Authentication & Authorization
+  - Request routing to microservices
+  - User management
+  - Platform management
+  - Health checks for all services
+
+### 2. **Donation Service** (Port: 9091)
+- **Role**: Handle all donation operations
+- **Database**: Donation DB (Isolated)
+- **Technology**: gRPC Server
+- **Features**:
+  - Create/Read donations
+  - Donation statistics
+  - Real-time donation streaming
+  - Donation history
+
+### 3. **Payment Service** (Port: 9092)
+- **Role**: Payment processing
+- **Database**: Payment DB (Isolated)
+- **Technology**: gRPC Server
+- **Features**:
+  - Payment processing (Midtrans, PayPal, Stripe)
+  - Payment verification
+  - Webhook handling
+  - Transaction management
+
+### 4. **Notification Service** (Port: 9093)
+- **Role**: Real-time notifications
+- **Database**: None (stateless)
+- **Technology**: gRPC Server
+- **Features**:
+  - Real-time notifications
+  - Event streaming
+  - Push notifications
+  - Email notifications
+
+## 🔄 Communication Patterns
+
+### **Synchronous Communication (gRPC)**
+```
+API Gateway ←→ Donation Service   (gRPC)
+API Gateway ←→ Payment Service    (gRPC)
+API Gateway ←→ Notification Service (gRPC)
+```
+
+### **Database Architecture (Database-per-Service)**
+- ✅ **Independent scaling** per service
+- ✅ **Data isolation** and security
+- ✅ **Technology diversity** support
+- ✅ **Fault isolation**
+
+## 📈 Scaling Strategy
+
+### **Horizontal Scaling**
 ```bash
-# Build for production
-make build-linux
-
-# Or use Docker
-docker build -t mediashar:latest .
-docker run -p 8080:8080 --env-file .env.production mediashar:latest
+# Scale specific service
+docker-compose -f docker-compose.microservices.yml up -d --scale donation-service=3
+docker-compose -f docker-compose.microservices.yml up -d --scale payment-service=2
 ```
+
+### **Production Considerations**
+- **Load Balancing**: Nginx or HAProxy
+- **Service Discovery**: Consul, Eureka, or Kubernetes
+- **Circuit Breaker**: For fault tolerance
+- **Monitoring**: Prometheus + Grafana
+- **Logging**: ELK Stack
+- **Security**: TLS for gRPC, API rate limiting
+
+## 📚 Documentation
+
+- 📖 **[API Documentation](docs/API.md)** - REST API reference
+- 🏗️ **[Microservices Guide](docs/MICROSERVICES_ARCHITECTURE.md)** - Detailed microservices documentation  
+- 🔧 **[Development Guide](docs/DEVELOPMENT.md)** - Development setup and workflow
+- 🐳 **[Deployment Guide](docs/DEPLOYMENT.md)** - Production deployment
+- 🔒 **[Security Guide](docs/SECURITY.md)** - Security considerations
 
 ## 🤝 Contributing
 
-### **Development Workflow**
+1. **Fork** the repository
+2. **Create** a feature branch
+3. **Follow** the microservices patterns
+4. **Add** tests for new features
+5. **Update** documentation
+6. **Submit** a pull request
 
-1. **Setup Development Environment**
-   ```bash
-   make install-tools
-   make up
-   ```
-
-2. **Make Changes**
-   ```bash
-   # Format code
-   make fmt
-   
-   # Run linter
-   make lint
-   
-   # Run tests
-   make test
-   ```
-
-3. **Test Integration**
-   ```bash
-   make docker-test
-   ```
-
-4. **Code Quality Checks**
-   ```bash
-   make check  # Runs fmt, vet, lint
-   ```
-
-### **Code Standards**
-
-- **Go formatting**: `gofmt` + `goimports`
-- **Linting**: `golangci-lint`
-- **Security**: `gosec`
-- **Testing**: Minimum 80% coverage
-- **Documentation**: Godoc comments
-
-### **Commit Guidelines**
-
+### Development Workflow
 ```bash
-feat: add Midtrans payment integration
-fix: resolve database connection issue  
-docs: update API documentation
-test: add integration tests for payments
-refactor: improve service layer structure
+# Create feature branch
+git checkout -b feature/new-payment-method
+
+# Make changes and test
+make test
+make lint
+
+# Generate protobuf if needed
+make proto-gen
+make rebuild
+
+# Commit and push
+git commit -m "feat: add new payment method"
+git push origin feature/new-payment-method
 ```
 
-## 📞 Support
-
-### **Useful Commands**
+## 🔧 Environment Variables
 
 ```bash
-# Show all available commands
-make help
+# API Gateway
+SERVER_PORT=8080
+JWT_SECRET=your-secret-key
+DB_HOST=gateway-db
 
-# Check environment
-make env-check
+# Microservice URLs
+DONATION_SERVICE_URL=donation-service:9091
+PAYMENT_SERVICE_URL=payment-service:9092
+NOTIFICATION_SERVICE_URL=notification-service:9093
 
-# View logs
-make logs
-
-# Access database
-make db-connect
-
-# Backup database
-make db-backup
+# Database configurations per service
+DONATION_DB_HOST=donation-db
+PAYMENT_DB_HOST=payment-db
 ```
 
-### **Troubleshooting**
+## 🚀 Production Deployment
 
-1. **Services not starting**
-   ```bash
-   make docker-clean
-   make up
-   ```
+```bash
+# Build production images
+make production
 
-2. **Database issues**
-   ```bash
-   make db-connect
-   # Check database manually
-   ```
+# Deploy to production
+docker-compose -f docker-compose.microservices.yml up -d --scale donation-service=3
 
-3. **Build issues**
-   ```bash
-   make clean
-   make deps
-   make build
-   ```
-
-### **Documentation**
-
-- **API Docs**: http://localhost:8083 (Swagger)
-- **Code Docs**: `make docs` (Godoc)
-- **Docker Guide**: [docs/DOCKER_TESTING.md](docs/DOCKER_TESTING.md)
-- **Midtrans Guide**: [docs/MIDTRANS_INTEGRATION.md](docs/MIDTRANS_INTEGRATION.md)
-
----
+# Check deployment
+make health-check
+make status
+```
 
 ## 📄 License
 
-This project is licensed under the MIT License.
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
 
-## 🙏 Acknowledgments
+## 🆘 Support
 
-- **Midtrans** untuk payment gateway integration
-- **Go community** untuk excellent tooling
-- **Docker** untuk containerization platform
+- 📧 **Email**: support@mediashar.com
+- 💬 **Discord**: [MediaShar Community](https://discord.gg/mediashar)
+- 🐛 **Issues**: [GitHub Issues](https://github.com/rzfd/mediashar/issues)
+- 📖 **Wiki**: [Documentation Wiki](https://github.com/rzfd/mediashar/wiki)
+
+## 🏆 Acknowledgments
+
+- **Go Community** for amazing tools and libraries
+- **gRPC Team** for high-performance communication
+- **Echo Framework** for excellent REST API support
+- **Docker** for containerization made easy
+- **PostgreSQL** for reliable database management
+
+---
+
+**🎉 Ready to build the next-generation donation platform with microservices!**
+
+```bash
+# Quick start
+./scripts/start-microservices.sh start
+
+# Or manual start
+make up
+```

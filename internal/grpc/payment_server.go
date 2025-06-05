@@ -27,15 +27,15 @@ func NewPaymentGRPCServer(paymentService service.PaymentService) *PaymentGRPCSer
 // ProcessPayment processes a payment for a donation via gRPC
 func (s *PaymentGRPCServer) ProcessPayment(ctx context.Context, req *pb.ProcessPaymentRequest) (*pb.ProcessPaymentResponse, error) {
 	// Convert gRPC payment provider to model
-	provider := convertPbToModelPaymentProvider(req.Provider)
+	provider := convertPbToModelPaymentProviderForPayment(req.Provider)
 	
 	// For now, we'll create a mock donation since we need the donation object
 	// In a real microservices architecture, you'd fetch this from the donation service
 	donation := &models.Donation{
-		ID:       uint(req.DonationId),
 		Amount:   100.0, // Placeholder - would be fetched from donation service
 		Currency: "IDR", // Placeholder
 	}
+	donation.ID = uint(req.DonationId)
 
 	// Initiate payment
 	transactionID, err := s.paymentService.InitiatePayment(donation, provider)
@@ -54,7 +54,7 @@ func (s *PaymentGRPCServer) ProcessPayment(ctx context.Context, req *pb.ProcessP
 // VerifyPayment verifies a payment status via gRPC
 func (s *PaymentGRPCServer) VerifyPayment(ctx context.Context, req *pb.VerifyPaymentRequest) (*pb.VerifyPaymentResponse, error) {
 	// Convert gRPC payment provider to model
-	provider := convertPbToModelPaymentProvider(req.Provider)
+	provider := convertPbToModelPaymentProviderForPayment(req.Provider)
 
 	// Verify payment
 	isVerified, err := s.paymentService.VerifyPayment(req.TransactionId, provider)
@@ -80,7 +80,7 @@ func (s *PaymentGRPCServer) VerifyPayment(ctx context.Context, req *pb.VerifyPay
 // HandleWebhook handles payment webhook notifications via gRPC
 func (s *PaymentGRPCServer) HandleWebhook(ctx context.Context, req *pb.HandleWebhookRequest) (*pb.HandleWebhookResponse, error) {
 	// Convert gRPC payment provider to model
-	provider := convertPbToModelPaymentProvider(req.Provider)
+	provider := convertPbToModelPaymentProviderForPayment(req.Provider)
 
 	// Process webhook
 	transactionID, err := s.paymentService.ProcessWebhook(req.Payload, provider)
@@ -97,7 +97,7 @@ func (s *PaymentGRPCServer) HandleWebhook(ctx context.Context, req *pb.HandleWeb
 
 // Helper functions
 
-func convertPbToModelPaymentProvider(provider pb.PaymentProvider) models.PaymentProvider {
+func convertPbToModelPaymentProviderForPayment(provider pb.PaymentProvider) models.PaymentProvider {
 	switch provider {
 	case pb.PaymentProvider_PAYMENT_PROVIDER_MIDTRANS:
 		return models.PaymentProviderMidtrans
@@ -106,9 +106,7 @@ func convertPbToModelPaymentProvider(provider pb.PaymentProvider) models.Payment
 	case pb.PaymentProvider_PAYMENT_PROVIDER_STRIPE:
 		return models.PaymentProviderStripe
 	case pb.PaymentProvider_PAYMENT_PROVIDER_QRIS:
-		return models.PaymentProviderQRIS
-	case pb.PaymentProvider_PAYMENT_PROVIDER_CRYPTO:
-		return models.PaymentProviderCrypto
+		return "QRIS"
 	default:
 		return models.PaymentProviderMidtrans // Default fallback
 	}
@@ -132,7 +130,7 @@ func generatePaymentURL(provider models.PaymentProvider, transactionID string) s
 func generateQRCode(provider models.PaymentProvider, transactionID string) string {
 	// Generate QR code for QRIS payments
 	// This is a placeholder implementation
-	if provider == models.PaymentProviderQRIS {
+	if provider == "QRIS" {
 		return "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8/5+hHgAHggJ/PchI7wAAAABJRU5ErkJggg==" // Placeholder base64
 	}
 	return ""

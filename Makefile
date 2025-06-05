@@ -1,7 +1,7 @@
-# MediaShar Project Makefile
-# Comprehensive task automation for Go backend with Docker and Midtrans integration
+# MediaShar Microservices Project Makefile
+# Comprehensive task automation for microservices architecture
 
-.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test midtrans-test production check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open proto-install proto-gen proto-clean
+.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test health-check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open proto-install proto-gen proto-clean
 
 # Default target
 .DEFAULT_GOAL := help
@@ -16,43 +16,84 @@ NC     := \033[0m # No Color
 # Project variables
 APP_NAME := mediashar
 DOCKER_COMPOSE := docker-compose
-MAIN_PATH := cmd/api/main.go
-BUILD_DIR := bin
 FRONTEND_DIR := frontend
 FRONTEND_PORT := 8000
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
 BUILD_TIME := $(shell date +%Y-%m-%d_%H:%M:%S)
 LDFLAGS := -ldflags "-X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 
+# Go parameters
+GOCMD=go
+GOBUILD=$(GOCMD) build
+GOCLEAN=$(GOCMD) clean
+GOTEST=$(GOCMD) test
+GOGET=$(GOCMD) get
+GOMOD=$(GOCMD) mod
+
+# Binary names
+DONATION_SERVICE=donation-service
+PAYMENT_SERVICE=payment-service
+NOTIFICATION_SERVICE=notification-service
+API_GATEWAY=api-gateway
+
 ##@ Help
 
 help: ## Display available commands
 	@echo ""
-	@echo "$(GREEN)🚀 MediaShar Development Commands$(NC)"
-	@echo "=================================="
+	@echo "$(GREEN)🚀 MediaShar Microservices Commands$(NC)"
+	@echo "====================================="
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make $(YELLOW)<target>$(NC)\n"} /^[a-zA-Z_0-9-]+:.*?##/ { printf "  $(BLUE)%-15s$(NC) %s\n", $$1, $$2 } /^##@/ { printf "\n$(GREEN)%s$(NC)\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 	@echo ""
 
 ##@ Development
 
-build: ## Build the application binary
-	@echo "$(YELLOW)📦 Building $(APP_NAME)...$(NC)"
-	@mkdir -p $(BUILD_DIR)
-	@go build $(LDFLAGS) -o $(BUILD_DIR)/$(APP_NAME) $(MAIN_PATH)
-	@echo "$(GREEN)✅ Build completed: $(BUILD_DIR)/$(APP_NAME)$(NC)"
+build: build-microservices ## Build all microservices
 
-dev: ## Run application in development mode
-	@echo "$(YELLOW)🔧 Starting development server...$(NC)"
-	@go run $(MAIN_PATH)
+build-microservices: build-donation-service build-payment-service build-notification-service build-api-gateway ## Build all microservices
 
-watch: ## Run with file watching (requires air)
-	@echo "$(YELLOW)👀 Starting with hot reload...$(NC)"
-	@if command -v air > /dev/null 2>&1; then \
-		air; \
-	else \
-		echo "$(RED)❌ Air not installed. Run: make install-tools$(NC)"; \
-		exit 1; \
-	fi
+build-donation-service: ## Build donation microservice
+	@echo "$(YELLOW)📦 Building donation service...$(NC)"
+	@$(GOBUILD) $(LDFLAGS) -o bin/$(DONATION_SERVICE) ./cmd/donation-service
+	@echo "$(GREEN)✅ Donation service built$(NC)"
+
+build-payment-service: ## Build payment microservice
+	@echo "$(YELLOW)📦 Building payment service...$(NC)"
+	@$(GOBUILD) $(LDFLAGS) -o bin/$(PAYMENT_SERVICE) ./cmd/payment-service
+	@echo "$(GREEN)✅ Payment service built$(NC)"
+
+build-notification-service: ## Build notification microservice
+	@echo "$(YELLOW)📦 Building notification service...$(NC)"
+	@$(GOBUILD) $(LDFLAGS) -o bin/$(NOTIFICATION_SERVICE) ./cmd/notification-service
+	@echo "$(GREEN)✅ Notification service built$(NC)"
+
+build-api-gateway: ## Build API gateway
+	@echo "$(YELLOW)📦 Building API gateway...$(NC)"
+	@$(GOBUILD) $(LDFLAGS) -o bin/$(API_GATEWAY) ./cmd/api-gateway
+	@echo "$(GREEN)✅ API gateway built$(NC)"
+
+dev: up ## Start development environment
+
+##@ Local Development
+
+run-donation-service: ## Run donation service locally
+	@echo "$(YELLOW)🚀 Starting donation service locally...$(NC)"
+	@$(GOBUILD) -o $(DONATION_SERVICE) ./cmd/donation-service
+	@./$(DONATION_SERVICE)
+
+run-payment-service: ## Run payment service locally
+	@echo "$(YELLOW)🚀 Starting payment service locally...$(NC)"
+	@$(GOBUILD) -o $(PAYMENT_SERVICE) ./cmd/payment-service
+	@./$(PAYMENT_SERVICE)
+
+run-notification-service: ## Run notification service locally
+	@echo "$(YELLOW)🚀 Starting notification service locally...$(NC)"
+	@$(GOBUILD) -o $(NOTIFICATION_SERVICE) ./cmd/notification-service
+	@./$(NOTIFICATION_SERVICE)
+
+run-api-gateway: ## Run API gateway locally
+	@echo "$(YELLOW)🚀 Starting API gateway locally...$(NC)"
+	@$(GOBUILD) -o $(API_GATEWAY) ./cmd/api-gateway
+	@./$(API_GATEWAY)
 
 ##@ Frontend
 
@@ -93,8 +134,8 @@ frontend-dev: ## Start full development environment (backend + frontend)
 	@sleep 5
 	@echo "$(BLUE)ℹ️  Backend: http://localhost:8080$(NC)"
 	@echo "$(BLUE)ℹ️  Frontend: http://localhost:$(FRONTEND_PORT)$(NC)"
-	@echo "$(BLUE)ℹ️  pgAdmin: http://localhost:5050$(NC)"
-	@echo "$(BLUE)ℹ️  Swagger: http://localhost:8080/swagger/index.html$(NC)"
+	@echo "$(BLUE)ℹ️  pgAdmin: http://localhost:8082$(NC)"
+	@echo "$(BLUE)ℹ️  Swagger: http://localhost:8083$(NC)"
 	@echo "$(YELLOW)🌐 Starting frontend server...$(NC)"
 	@$(MAKE) frontend-serve
 
@@ -126,30 +167,6 @@ frontend-open: ## Open frontend in default browser
 		echo "$(BLUE)ℹ️  Please open http://localhost:$(FRONTEND_PORT) in your browser$(NC)"; \
 	fi
 
-frontend-docker-build: ## Build frontend Docker image
-	@echo "$(YELLOW)🐳 Building frontend Docker image...$(NC)"
-	@cd $(FRONTEND_DIR) && docker build -t $(APP_NAME)-frontend:latest .
-	@echo "$(GREEN)✅ Frontend Docker image built$(NC)"
-
-frontend-docker-run: ## Run frontend container standalone
-	@echo "$(YELLOW)🚀 Running frontend container...$(NC)"
-	@docker run -d -p $(FRONTEND_PORT):80 --name $(APP_NAME)-frontend $(APP_NAME)-frontend:latest
-	@echo "$(GREEN)✅ Frontend container running at http://localhost:$(FRONTEND_PORT)$(NC)"
-
-frontend-docker-stop: ## Stop frontend container
-	@echo "$(YELLOW)🛑 Stopping frontend container...$(NC)"
-	@docker stop $(APP_NAME)-frontend 2>/dev/null || true
-	@docker rm $(APP_NAME)-frontend 2>/dev/null || true
-	@echo "$(GREEN)✅ Frontend container stopped$(NC)"
-
-frontend-docker-logs: ## View frontend container logs
-	@echo "$(YELLOW)📋 Frontend container logs:$(NC)"
-	@docker logs -f $(APP_NAME)-frontend
-
-frontend-docker-shell: ## Access frontend container shell
-	@echo "$(YELLOW)💻 Accessing frontend container...$(NC)"
-	@docker exec -it $(APP_NAME)-frontend sh
-
 ##@ Testing
 
 test: ## Run all tests
@@ -170,13 +187,14 @@ benchmark: ## Run benchmarks
 	@echo "$(YELLOW)⚡ Running benchmarks...$(NC)"
 	@go test -bench=. -benchmem ./...
 
-quick-test: ## Run quick integration test
-	@echo "$(YELLOW)⚡ Running quick test...$(NC)"
-	@if [ -f quick_test.sh ]; then \
-		chmod +x quick_test.sh && ./quick_test.sh; \
-	else \
-		echo "$(RED)❌ quick_test.sh not found$(NC)"; \
-	fi
+test-grpc: ## Test gRPC services with grpcurl
+	@echo "$(YELLOW)🧪 Testing gRPC services...$(NC)"
+	@echo "1. Testing Donation Service..."
+	@grpcurl -plaintext localhost:9091 list || echo "Donation service not available"
+	@echo "2. Testing Payment Service..."
+	@grpcurl -plaintext localhost:9092 list || echo "Payment service not available"
+	@echo "3. Testing Notification Service..."
+	@grpcurl -plaintext localhost:9093 list || echo "Notification service not available"
 
 ##@ Docker Operations
 
@@ -184,123 +202,120 @@ docker-build: ## Build Docker containers
 	@echo "$(YELLOW)🐳 Building Docker containers...$(NC)"
 	@$(DOCKER_COMPOSE) build --no-cache
 
-docker-up: ## Start all Docker services
-	@echo "$(YELLOW)🚀 Starting Docker services...$(NC)"
-	@$(DOCKER_COMPOSE) up -d
+docker-up: up ## Start all Docker services (alias)
 
-docker-down: ## Stop Docker services
-	@echo "$(YELLOW)🛑 Stopping Docker services...$(NC)"
-	@$(DOCKER_COMPOSE) down
+docker-down: down ## Stop Docker services (alias)
 
-docker-restart: ## Restart Docker services
-	@echo "$(YELLOW)🔄 Restarting Docker services...$(NC)"
-	@$(DOCKER_COMPOSE) restart
+docker-restart: restart ## Restart Docker services (alias)
 
 docker-clean: ## Clean Docker containers and volumes
 	@echo "$(YELLOW)🧹 Cleaning Docker containers and volumes...$(NC)"
 	@$(DOCKER_COMPOSE) down --volumes --remove-orphans
 	@docker system prune -f
 
-docker-logs: ## Show Docker application logs
-	@echo "$(YELLOW)📋 Application logs:$(NC)"
-	@$(DOCKER_COMPOSE) logs -f app
+docker-logs: logs ## Show Docker application logs (alias)
 
-docker-logs-all: ## Show all Docker services logs
-	@echo "$(YELLOW)📋 All services logs:$(NC)"
-	@$(DOCKER_COMPOSE) logs -f
+docker-logs-all: logs ## Show all Docker services logs (alias)
 
 docker-ps: ## Show Docker container status
 	@echo "$(YELLOW)📊 Container status:$(NC)"
 	@$(DOCKER_COMPOSE) ps
 
-docker-exec: ## Execute bash in app container
-	@echo "$(YELLOW)💻 Accessing app container...$(NC)"
-	@$(DOCKER_COMPOSE) exec app sh
+docker-exec: ## Execute bash in api-gateway container
+	@echo "$(YELLOW)💻 Accessing api-gateway container...$(NC)"
+	@$(DOCKER_COMPOSE) exec api-gateway sh
 
-##@ Testing & Integration
+##@ Microservices Operations
 
-docker-test: ## Run comprehensive Docker integration tests
-	@echo "$(YELLOW)🧪 Running Docker integration tests...$(NC)"
-	@if [ -f scripts/test-docker.sh ]; then \
-		chmod +x scripts/test-docker.sh && ./scripts/test-docker.sh; \
-	else \
-		echo "$(RED)❌ scripts/test-docker.sh not found$(NC)"; \
-		exit 1; \
-	fi
+up: ## Start microservices containers
+	@echo "$(YELLOW)🚀 Starting microservices...$(NC)"
+	@$(DOCKER_COMPOSE) up -d
 
-midtrans-test: ## Test Midtrans integration specifically
-	@echo "$(YELLOW)💳 Testing Midtrans integration...$(NC)"
-	@curl -s http://localhost:8080/health || echo "$(RED)❌ App not running. Run: make docker-up$(NC)"
-	@echo "$(BLUE)ℹ️  Check Midtrans configuration in docker-compose.yml$(NC)"
+down: ## Stop microservices containers
+	@echo "$(YELLOW)🛑 Stopping microservices...$(NC)"
+	@$(DOCKER_COMPOSE) down
 
-health-check: ## Check service health
-	@echo "$(YELLOW)🏥 Checking service health...$(NC)"
-	@curl -s http://localhost:8080/health | jq . || echo "$(RED)❌ Health check failed$(NC)"
-	@curl -s http://localhost:8080/ready | jq . || echo "$(RED)❌ Readiness check failed$(NC)"
+logs: ## View microservices logs
+	@echo "$(YELLOW)📋 Microservices logs:$(NC)"
+	@$(DOCKER_COMPOSE) logs -f
+
+logs-service: ## View specific service logs (usage: make logs-service SERVICE=donation-service)
+	@echo "$(YELLOW)📋 $(SERVICE) logs:$(NC)"
+	@$(DOCKER_COMPOSE) logs -f $(SERVICE)
+
+clean: ## Clean microservices Docker resources
+	@echo "$(YELLOW)🧹 Cleaning microservices resources...$(NC)"
+	@$(DOCKER_COMPOSE) down -v --rmi all
+
+restart: ## Restart microservices
+	@echo "$(YELLOW)🔄 Restarting microservices...$(NC)"
+	@$(DOCKER_COMPOSE) restart
+
+rebuild: ## Rebuild and restart microservices
+	@echo "$(YELLOW)🔨 Rebuilding and restarting microservices...$(NC)"
+	@$(MAKE) down
+	@$(MAKE) docker-build
+	@$(MAKE) up
 
 ##@ Database
 
-db-connect: ## Connect to PostgreSQL database
-	@echo "$(YELLOW)🗄️  Connecting to database...$(NC)"
-	@$(DOCKER_COMPOSE) exec postgres psql -U postgres -d donation_system
+db-setup: ## Setup microservices databases
+	@echo "$(YELLOW)🗄️  Setting up microservices databases...$(NC)"
+	@$(DOCKER_COMPOSE) up -d gateway-db donation-db payment-db
+	@echo "$(GREEN)✅ Databases are starting up. Please wait for health checks to pass.$(NC)"
 
-db-migrate-up: ## Run database migrations up
-	@echo "$(YELLOW)⬆️  Running migrations up...$(NC)"
-	@if command -v migrate > /dev/null 2>&1; then \
-		migrate -path migrations -database "postgres://postgres:password@localhost:5432/donation_system?sslmode=disable" up; \
-	else \
-		echo "$(RED)❌ migrate tool not installed. Run: make install-tools$(NC)"; \
-	fi
+db-connect-gateway: ## Connect to Gateway database
+	@echo "$(YELLOW)🗄️  Connecting to Gateway database...$(NC)"
+	@$(DOCKER_COMPOSE) exec gateway-db psql -U postgres -d gateway_db
 
-db-migrate-down: ## Run database migrations down
-	@echo "$(YELLOW)⬇️  Running migrations down...$(NC)"
-	@if command -v migrate > /dev/null 2>&1; then \
-		migrate -path migrations -database "postgres://postgres:password@localhost:5432/donation_system?sslmode=disable" down; \
-	else \
-		echo "$(RED)❌ migrate tool not installed. Run: make install-tools$(NC)"; \
-	fi
+db-connect-donation: ## Connect to Donation database
+	@echo "$(YELLOW)🗄️  Connecting to Donation database...$(NC)"
+	@$(DOCKER_COMPOSE) exec donation-db psql -U postgres -d donation_db
 
-db-backup: ## Backup database
-	@echo "$(YELLOW)💾 Backing up database...$(NC)"
-	@mkdir -p backups
-	@$(DOCKER_COMPOSE) exec postgres pg_dump -U postgres donation_system > backups/backup_$(shell date +%Y%m%d_%H%M%S).sql
-	@echo "$(GREEN)✅ Database backed up to backups/$(NC)"
+db-connect-payment: ## Connect to Payment database
+	@echo "$(YELLOW)🗄️  Connecting to Payment database...$(NC)"
+	@$(DOCKER_COMPOSE) exec payment-db psql -U postgres -d payment_db
 
-db-restore: ## Restore database (requires BACKUP_FILE=filename)
-	@echo "$(YELLOW)📥 Restoring database...$(NC)"
-	@if [ -z "$(BACKUP_FILE)" ]; then \
-		echo "$(RED)❌ Please specify BACKUP_FILE=filename$(NC)"; \
-		exit 1; \
-	fi
-	@$(DOCKER_COMPOSE) exec -T postgres psql -U postgres -d donation_system < $(BACKUP_FILE)
-	@echo "$(GREEN)✅ Database restored$(NC)"
+##@ Health & Monitoring
 
-##@ Documentation & Setup
+health-check: ## Check microservices health
+	@echo "$(YELLOW)🏥 Checking microservices health...$(NC)"
+	@echo "API Gateway:"
+	@curl -s http://localhost:8080/health | jq . || echo "$(RED)❌ API Gateway health check failed$(NC)"
+	@echo "Services Health:"
+	@curl -s http://localhost:8080/services/health | jq . || echo "$(RED)❌ Services health check failed$(NC)"
 
-swagger: ## Setup Swagger documentation
-	@echo "$(YELLOW)📚 Setting up Swagger documentation...$(NC)"
-	@if [ -f scripts/setup-swagger.sh ]; then \
-		chmod +x scripts/setup-swagger.sh && ./scripts/setup-swagger.sh; \
-	else \
-		echo "$(RED)❌ scripts/setup-swagger.sh not found$(NC)"; \
-	fi
+status: ## Show complete system status
+	@echo "$(YELLOW)📊 Complete System Status$(NC)"
+	@echo "=========================="
+	@echo ""
+	@echo "$(BLUE)🐳 Docker Services:$(NC)"
+	@$(MAKE) docker-ps
+	@echo ""
+	@echo "$(BLUE)🏥 Health Status:$(NC)"
+	@$(MAKE) health-check
+	@echo ""
 
-platform: ## Setup platform integration
-	@echo "$(YELLOW)🔗 Setting up platform integration...$(NC)"
-	@if [ -f scripts/setup-platform-integration.sh ]; then \
-		chmod +x scripts/setup-platform-integration.sh && ./scripts/setup-platform-integration.sh; \
-	else \
-		echo "$(RED)❌ scripts/setup-platform-integration.sh not found$(NC)"; \
-	fi
+##@ Protocol Buffers
 
-docs: ## Generate documentation
-	@echo "$(YELLOW)📖 Generating documentation...$(NC)"
-	@if command -v godoc > /dev/null 2>&1; then \
-		echo "$(BLUE)ℹ️  Starting godoc server at http://localhost:6060$(NC)"; \
-		godoc -http=:6060; \
-	else \
-		echo "$(RED)❌ godoc not installed. Run: make install-tools$(NC)"; \
-	fi
+proto-install: ## Install protobuf compiler and Go plugins
+	@echo "$(YELLOW)📦 Installing protoc and Go plugins...$(NC)"
+	@go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
+	@go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
+	@echo "$(GREEN)✅ Proto tools installed$(NC)"
+
+proto-gen: ## Generate Go code from proto files
+	@echo "$(YELLOW)🔧 Generating protobuf files...$(NC)"
+	@mkdir -p pkg/pb
+	@protoc --go_out=. --go_opt=module=github.com/rzfd/mediashar \
+		   --go-grpc_out=. --go-grpc_opt=module=github.com/rzfd/mediashar \
+		   proto/*.proto
+	@echo "$(GREEN)✅ Protobuf files generated$(NC)"
+
+proto-clean: ## Clean generated proto files
+	@echo "$(YELLOW)🧹 Cleaning generated proto files...$(NC)"
+	@rm -rf pkg/pb/*.pb.go
+	@echo "$(GREEN)✅ Proto files cleaned$(NC)"
 
 ##@ Code Quality
 
@@ -351,8 +366,8 @@ install-tools: ## Install development tools
 	@go install github.com/securecodewarrior/gosec/v2/cmd/gosec@latest
 	@echo "Installing goimports..."
 	@go install golang.org/x/tools/cmd/goimports@latest
-	@echo "Installing migrate..."
-	@go install -tags 'postgres' github.com/golang-migrate/migrate/v4/cmd/migrate@latest
+	@echo "Installing grpcurl..."
+	@go install github.com/fullstorydev/grpcurl/cmd/grpcurl@latest
 	@echo "$(GREEN)✅ All tools installed$(NC)"
 
 env-check: ## Check environment setup
@@ -367,14 +382,17 @@ env-check: ## Check environment setup
 
 build-linux: ## Build for Linux production
 	@echo "$(YELLOW)🐧 Building for Linux...$(NC)"
-	@mkdir -p $(BUILD_DIR)
-	@GOOS=linux GOARCH=amd64 go build $(LDFLAGS) -o $(BUILD_DIR)/$(APP_NAME)-linux $(MAIN_PATH)
-	@echo "$(GREEN)✅ Linux build completed$(NC)"
+	@mkdir -p bin
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o bin/$(DONATION_SERVICE)-linux ./cmd/donation-service
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o bin/$(PAYMENT_SERVICE)-linux ./cmd/payment-service
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o bin/$(NOTIFICATION_SERVICE)-linux ./cmd/notification-service
+	@GOOS=linux GOARCH=amd64 $(GOBUILD) $(LDFLAGS) -o bin/$(API_GATEWAY)-linux ./cmd/api-gateway
+	@echo "$(GREEN)✅ Linux builds completed$(NC)"
 
-production: ## Build production Docker image
-	@echo "$(YELLOW)🏭 Building production image...$(NC)"
-	@docker build -t $(APP_NAME):$(VERSION) -t $(APP_NAME):latest .
-	@echo "$(GREEN)✅ Production image built$(NC)"
+production: ## Build production Docker images
+	@echo "$(YELLOW)🏭 Building production images...$(NC)"
+	@$(DOCKER_COMPOSE) build
+	@echo "$(GREEN)✅ Production images built$(NC)"
 
 deploy-check: ## Check deployment readiness
 	@echo "$(YELLOW)🚀 Checking deployment readiness...$(NC)"
@@ -389,39 +407,28 @@ deploy-check: ## Check deployment readiness
 
 ##@ Cleanup
 
-clean: ## Clean build artifacts
+clean-build: ## Clean build artifacts
 	@echo "$(YELLOW)🧹 Cleaning build artifacts...$(NC)"
-	@rm -rf $(BUILD_DIR)
+	@rm -rf bin
 	@rm -f coverage.out coverage.html
 	@go clean -cache
 	@echo "$(GREEN)✅ Cleanup completed$(NC)"
 
-clean-all: clean docker-clean ## Clean everything (build + Docker)
+clean-all: clean-build clean ## Clean everything (build + Docker)
 	@echo "$(GREEN)✅ Full cleanup completed$(NC)"
 
 ##@ Quick Commands
 
-up: docker-up ## Quick start (alias for docker-up)
-
-down: docker-down ## Quick stop (alias for docker-down)
-
-logs: docker-logs ## Quick logs (alias for docker-logs)
-
-restart: docker-restart ## Quick restart (alias for docker-restart)
-
-status: docker-ps health-check ## Show status and health
-
-# Frontend shortcuts
-frontend: frontend-serve ## Quick frontend serve (alias for frontend-serve)
-
-web: frontend-dev ## Quick full stack development (alias for frontend-dev)
-
-test-ui: frontend-test ## Quick frontend integration test (alias for frontend-test)
+# Shortcuts for common operations
+start: up ## Quick start (alias for up)
+stop: down ## Quick stop (alias for down)
+frontend: frontend-serve ## Quick frontend serve
+web: frontend-dev ## Quick full stack development
 
 # All-in-one commands
-dev-full: ## Start complete development environment with frontend
-	@echo "$(YELLOW)🚀 Starting complete development environment...$(NC)"
-	@echo "$(BLUE)ℹ️  Step 1: Starting backend services...$(NC)"
+dev-full: ## Start complete microservices environment with frontend
+	@echo "$(YELLOW)🚀 Starting complete microservices environment...$(NC)"
+	@echo "$(BLUE)ℹ️  Step 1: Starting microservices...$(NC)"
 	@$(MAKE) up
 	@echo "$(BLUE)ℹ️  Step 2: Waiting for services...$(NC)"
 	@sleep 8
@@ -429,50 +436,25 @@ dev-full: ## Start complete development environment with frontend
 	@$(MAKE) health-check
 	@echo "$(BLUE)ℹ️  Step 4: All services ready!$(NC)"
 	@echo ""
-	@echo "$(GREEN)✅ Development Environment Ready!$(NC)"
-	@echo "$(BLUE)🌐 Backend API: http://localhost:8080$(NC)"
+	@echo "$(GREEN)✅ Microservices Environment Ready!$(NC)"
+	@echo "$(BLUE)🌐 API Gateway: http://localhost:8080$(NC)"
 	@echo "$(BLUE)🎨 Frontend UI: http://localhost:$(FRONTEND_PORT)$(NC)"
-	@echo "$(BLUE)📊 pgAdmin: http://localhost:5050$(NC)"
-	@echo "$(BLUE)📚 Swagger: http://localhost:8080/swagger/index.html$(NC)"
+	@echo "$(BLUE)📊 pgAdmin: http://localhost:8082$(NC)"
+	@echo "$(BLUE)📚 Swagger: http://localhost:8083$(NC)"
+	@echo "$(BLUE)🔧 Donation Service: localhost:9091$(NC)"
+	@echo "$(BLUE)💳 Payment Service: localhost:9092$(NC)"
+	@echo "$(BLUE)🔔 Notification Service: localhost:9093$(NC)"
 	@echo ""
 	@echo "$(YELLOW)ℹ️  Run 'make frontend' in another terminal to start frontend$(NC)"
 	@echo "$(YELLOW)ℹ️  Or run 'make frontend-open' to open browser$(NC)"
 
-status-full: ## Show complete system status
-	@echo "$(YELLOW)📊 Complete System Status$(NC)"
-	@echo "=========================="
-	@echo ""
-	@echo "$(BLUE)🐳 Docker Services:$(NC)"
-	@$(MAKE) docker-ps
-	@echo ""
-	@echo "$(BLUE)🏥 Health Status:$(NC)"
-	@$(MAKE) health-check
-	@echo ""
-	@echo "$(BLUE)🌐 Frontend Status:$(NC)"
-	@$(MAKE) frontend-test
-	@echo ""
-	@echo "$(BLUE)💾 Database Connection:$(NC)"
-	@$(DOCKER_COMPOSE) exec postgres pg_isready -U postgres 2>/dev/null && echo "$(GREEN)✅ Database ready$(NC)" || echo "$(RED)❌ Database not ready$(NC)"
-	@echo ""
-	@echo "$(BLUE)📋 Environment Info:$(NC)"
-	@$(MAKE) env-check
-
-# Proto generation
-proto-install:
-	@echo "📦 Installing protoc and Go plugins..."
-	go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-	go install google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest
-	@echo "✅ Proto tools installed"
-
-proto-gen:
-	@echo "🔧 Generating protobuf files..."
-	@mkdir -p pkg/pb
-	protoc --go_out=. --go_opt=module=github.com/rzfd/mediashar \
-		   --go-grpc_out=. --go-grpc_opt=module=github.com/rzfd/mediashar \
-		   proto/*.proto
-	@echo "✅ Protobuf files generated"
-
-proto-clean:
-	@echo "🧹 Cleaning generated proto files..."
-	@rm -rf pkg/pb/*.pb.go
-	@echo "✅ Proto files cleaned" 
+.PHONY: build clean test run deps \
+	build-microservices build-donation-service build-payment-service build-notification-service build-api-gateway \
+	run-donation-service run-payment-service run-notification-service run-api-gateway \
+	docker-build docker-up docker-down docker-logs docker-clean \
+	up down logs logs-service clean restart rebuild \
+	proto-install proto-gen proto-clean \
+	db-setup db-connect-gateway db-connect-donation db-connect-payment \
+	health-check status \
+	test-grpc benchmark \
+	format lint security help 
