@@ -37,7 +37,7 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		log.Printf("✅ Notification Service listening on port %s", getEnv("GRPC_PORT", "9093"))
+		log.Printf("Notification Service listening on port %s", getEnv("GRPC_PORT", "9093"))
 		if err := grpcSrv.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
 		}
@@ -50,7 +50,7 @@ func main() {
 
 	log.Println("🛑 Shutting down Notification Service...")
 	grpcSrv.GracefulStop()
-	log.Println("✅ Notification Service stopped")
+	log.Println("Notification Service stopped")
 }
 
 func getEnv(key, defaultValue string) string {

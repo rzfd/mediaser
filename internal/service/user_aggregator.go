@@ -39,12 +39,12 @@ func (s *userAggregatorService) GetUser(ctx context.Context, userID uint) (*mode
 	// First, try to get from cache
 	cachedUser, err := s.cacheRepo.Get(userID)
 	if err == nil && !cachedUser.IsExpired() {
-		fmt.Printf("📋 Cache hit for user ID %d\n", userID)
+		fmt.Printf("Cache hit for user ID %d\n", userID)
 		return cachedUser.ToUser(), nil
 	}
 
 	// Cache miss or expired, fetch from User Service
-	fmt.Printf("🌐 Cache miss for user ID %d, fetching from User Service\n", userID)
+	fmt.Printf("Cache miss for user ID %d, fetching from User Service\n", userID)
 	
 	if s.userClient == nil {
 		return nil, fmt.Errorf("user service client not available and no valid cache for user %d", userID)

@@ -23,7 +23,7 @@ import (
 )
 
 func main() {
-	log.Println("🚀 Starting Donation Microservice...")
+	log.Println("Starting Donation Microservice...")
 
 	// Load configuration
 	config, err := configs.LoadConfig()
@@ -90,7 +90,7 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		log.Printf("✅ Donation Service listening on port %s", getEnv("GRPC_PORT", "9091"))
+		log.Printf("Donation Service listening on port %s", getEnv("GRPC_PORT", "9091"))
 		if err := grpcSrv.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
 		}
@@ -101,9 +101,9 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("🛑 Shutting down Donation Service...")
+	log.Println("Shutting down Donation Service...")
 	grpcSrv.GracefulStop()
-	log.Println("✅ Donation Service stopped")
+	log.Println("Donation Service stopped")
 }
 
 func getEnv(key, defaultValue string) string {
@@ -136,7 +136,7 @@ func migrateDonationTables(db *gorm.DB) error {
 		return err
 	}
 	
-	log.Println("✅ Database migration completed successfully without foreign key constraints")
+	log.Println("Database migration completed successfully without foreign key constraints")
 	return nil
 }
 
@@ -155,15 +155,15 @@ func dropExistingForeignKeys(db *gorm.DB) error {
 		if err := db.Exec(fmt.Sprintf("ALTER TABLE donations DROP CONSTRAINT IF EXISTS %s", constraint)).Error; err != nil {
 			log.Printf("Info: Could not drop constraint %s (might not exist): %v", constraint, err)
 		} else {
-			log.Printf("✅ Dropped foreign key constraint: %s", constraint)
+			log.Printf("Dropped foreign key constraint: %s", constraint)
 		}
 	}
 	
 	// Also try to clean up any existing data that might conflict
-	log.Println("🧹 Cleaning up donation table to prevent constraint conflicts...")
+	log.Println("Cleaning up donation table to prevent constraint conflicts...")
 	
 	// Don't truncate as we want to preserve data, just ensure consistency
-	log.Println("✅ Foreign key cleanup completed")
+	log.Println("Foreign key cleanup completed")
 	
 	return nil
 } 

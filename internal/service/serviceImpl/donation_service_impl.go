@@ -190,7 +190,7 @@ func (s *donationService) ensureUsersExist(donation *models.Donation) error {
 	}
 
 	// Log the validation result
-	fmt.Printf("✅ User validation passed - StreamerID: %d, DonatorID: %d, Anonymous: %t\n", 
+	fmt.Printf("User validation passed - StreamerID: %d, DonatorID: %d, Anonymous: %t\n", 
 		donation.StreamerID, donation.DonatorID, donation.IsAnonymous)
 
 	return nil

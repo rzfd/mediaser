@@ -73,7 +73,7 @@ func main() {
 
 	// Graceful shutdown
 	go func() {
-		log.Printf("✅ Payment Service listening on port %s", getEnv("GRPC_PORT", "9092"))
+		log.Printf("Payment Service listening on port %s", getEnv("GRPC_PORT", "9092"))
 		if err := grpcSrv.Serve(lis); err != nil {
 			log.Fatalf("Failed to serve: %v", err)
 		}
@@ -86,7 +86,7 @@ func main() {
 
 	log.Println("🛑 Shutting down Payment Service...")
 	grpcSrv.GracefulStop()
-	log.Println("✅ Payment Service stopped")
+	log.Println("Payment Service stopped")
 }
 
 func getEnv(key, defaultValue string) string {
