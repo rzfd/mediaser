@@ -74,7 +74,7 @@ func (s *donationService) CreateDonation(req *service.CreateDonationRequest) (*m
 	// Create donation model
 	donation := &models.Donation{
 		Amount:      req.Amount,
-		Currency:    req.Currency,
+		Currency:    models.SupportedCurrency(req.Currency),
 		Message:     req.Message,
 		StreamerID:  req.StreamerID,
 		DisplayName: req.DisplayName,

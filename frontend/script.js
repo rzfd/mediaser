@@ -771,6 +771,149 @@ document.addEventListener('keydown', function(e) {
     }
 });
 
+// Currency Converter Functions
+async function convertCurrency() {
+    const amount = parseFloat(document.getElementById('currency-amount').value);
+    const fromCurrency = document.getElementById('currency-from').value;
+    const toCurrency = document.getElementById('currency-to').value;
+    
+    if (!amount || amount <= 0) {
+        showNotification('Please enter a valid amount', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Converting currency...', 'info');
+        
+        const response = await fetch('http://localhost:8094/api/currency/convert', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                amount: amount,
+                from_currency: fromCurrency,
+                to_currency: toCurrency
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            const resultDiv = document.getElementById('currency-result');
+            const conversionResult = document.getElementById('conversion-result');
+            const exchangeRate = document.getElementById('exchange-rate');
+            
+            conversionResult.textContent = `${amount} ${fromCurrency} = ${result.converted_amount.toLocaleString()} ${toCurrency}`;
+            exchangeRate.textContent = `Exchange Rate: 1 ${fromCurrency} = ${result.exchange_rate.toLocaleString()} ${toCurrency}`;
+            
+            resultDiv.classList.remove('hidden');
+            
+            logResponse('/currency/convert', 'POST', { amount, from_currency: fromCurrency, to_currency: toCurrency }, result, true);
+            showNotification('Currency converted successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Conversion failed');
+        }
+        
+    } catch (error) {
+        showNotification(`Currency conversion failed: ${error.message}`, 'error');
+        logResponse('/currency/convert', 'POST', { amount, from_currency: fromCurrency, to_currency: toCurrency }, { error: error.message }, false);
+        document.getElementById('currency-result').classList.add('hidden');
+    }
+}
+
+// Language Translator Functions
+async function translateText() {
+    const text = document.getElementById('translate-text').value.trim();
+    const fromLanguage = document.getElementById('language-from').value;
+    const toLanguage = document.getElementById('language-to').value;
+    
+    if (!text) {
+        showNotification('Please enter text to translate', 'error');
+        return;
+    }
+    
+    try {
+        showNotification('Translating text...', 'info');
+        
+        const response = await fetch('http://localhost:8095/api/language/translate', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                text: text,
+                from_language: fromLanguage,
+                to_language: toLanguage
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (response.ok) {
+            const resultDiv = document.getElementById('translation-result');
+            const translatedText = document.getElementById('translated-text');
+            const confidence = document.getElementById('translation-confidence');
+            
+            translatedText.textContent = result.translated_text;
+            confidence.textContent = `Confidence: ${(result.confidence * 100).toFixed(1)}%`;
+            
+            resultDiv.classList.remove('hidden');
+            
+            logResponse('/language/translate', 'POST', { text, from_language: fromLanguage, to_language: toLanguage }, result, true);
+            showNotification('Text translated successfully!', 'success');
+        } else {
+            throw new Error(result.error || 'Translation failed');
+        }
+        
+    } catch (error) {
+        showNotification(`Translation failed: ${error.message}`, 'error');
+        logResponse('/language/translate', 'POST', { text, from_language: fromLanguage, to_language: toLanguage }, { error: error.message }, false);
+        document.getElementById('translation-result').classList.add('hidden');
+    }
+}
+
+// Test Currency and Language Services
+async function testCurrencyAndLanguage() {
+    try {
+        showNotification('Testing Currency and Language services...', 'info');
+        
+        // Test Currency Service
+        const currencyListResponse = await fetch('http://localhost:8094/api/currency/list');
+        const currencyList = await currencyListResponse.json();
+        addTestResult('Currency Service - List', currencyListResponse.ok, `${currencyList.count} currencies available`);
+        
+        // Test Language Service
+        const languageListResponse = await fetch('http://localhost:8095/api/language/list');
+        const languageList = await languageListResponse.json();
+        addTestResult('Language Service - List', languageListResponse.ok, `${languageList.count} languages available`);
+        
+        // Test Currency Conversion
+        const conversionResponse = await fetch('http://localhost:8094/api/currency/convert', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ amount: 100, from_currency: 'USD', to_currency: 'IDR' })
+        });
+        const conversion = await conversionResponse.json();
+        addTestResult('Currency Service - Convert', conversionResponse.ok, `100 USD = ${conversion.converted_amount} IDR`);
+        
+        // Test Translation
+        const translationResponse = await fetch('http://localhost:8095/api/language/translate', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: 'Hello World', from_language: 'en', to_language: 'id' })
+        });
+        const translation = await translationResponse.json();
+        addTestResult('Language Service - Translate', translationResponse.ok, `"Hello World" → "${translation.translated_text}"`);
+        
+        showNotification('Currency and Language services tested successfully!', 'success');
+        
+    } catch (error) {
+        showNotification(`Service test failed: ${error.message}`, 'error');
+        addTestResult('Currency & Language Test', false, error.message);
+    }
+}
+
 // Add keyboard shortcut info to page
 document.addEventListener('DOMContentLoaded', function() {
     const shortcuts = document.createElement('div');

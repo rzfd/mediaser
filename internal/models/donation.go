@@ -26,7 +26,7 @@ const (
 type Donation struct {
 	Base
 	Amount          float64         `json:"amount" gorm:"not null"`
-	Currency        string          `json:"currency" gorm:"default:'USD'"`
+	Currency        SupportedCurrency `json:"currency" gorm:"default:'IDR'"`
 	Message         string          `json:"message"`
 	DonatorID       uint            `json:"donator_id" gorm:"not null;index"` // No foreign key constraint for microservices
 	Donator         User            `json:"donator,omitempty" gorm:"-"` // Excluded from database, handled at application level

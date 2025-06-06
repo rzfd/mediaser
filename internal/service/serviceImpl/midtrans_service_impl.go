@@ -92,7 +92,7 @@ func (s *midtransService) ProcessDonationPayment(donation *models.Donation) (*se
 	req := &service.MidtransPaymentRequest{
 		OrderID:      orderID,
 		Amount:       donation.Amount,
-		Currency:     donation.Currency,
+		Currency:     string(donation.Currency),
 		CustomerName: customerName,
 		CustomerEmail: customerEmail,
 		Description:  fmt.Sprintf("Donation to %s", donation.Streamer.Username),

@@ -213,6 +213,102 @@
                     </div>
                 </div>
 
+                <!-- Currency Converter -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-exchange-alt mr-2 text-blue-600"></i>
+                        Currency Converter
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">Amount</label>
+                                <input type="number" id="currency-amount" placeholder="Enter amount" value="100" 
+                                       class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From</label>
+                                <select id="currency-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option value="USD">USD</option>
+                                    <option value="IDR">IDR</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="JPY">JPY</option>
+                                    <option value="CNY">CNY</option>
+                                    <option value="SGD">SGD</option>
+                                    <option value="MYR">MYR</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To</label>
+                                <select id="currency-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option value="IDR">IDR</option>
+                                    <option value="USD">USD</option>
+                                    <option value="EUR">EUR</option>
+                                    <option value="JPY">JPY</option>
+                                    <option value="CNY">CNY</option>
+                                    <option value="SGD">SGD</option>
+                                    <option value="MYR">MYR</option>
+                                </select>
+                            </div>
+                        </div>
+                        <button onclick="convertCurrency()" class="w-full bg-blue-500 text-white py-2 rounded-lg hover:bg-blue-600 transition">
+                            <i class="fas fa-calculator mr-2"></i>Convert Currency
+                        </button>
+                        <div id="currency-result" class="hidden p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                            <div class="text-center">
+                                <div class="text-lg font-semibold text-blue-800" id="conversion-result"></div>
+                                <div class="text-sm text-blue-600" id="exchange-rate"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Language Translator -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
+                        <i class="fas fa-language mr-2 text-green-600"></i>
+                        Language Translator
+                    </h2>
+                    
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">From Language</label>
+                                <select id="language-from" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option value="en">English</option>
+                                    <option value="id">Indonesian</option>
+                                    <option value="zh">Chinese</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-gray-700 mb-1">To Language</label>
+                                <select id="language-to" class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                    <option value="id">Indonesian</option>
+                                    <option value="en">English</option>
+                                    <option value="zh">Chinese</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Text to Translate</label>
+                            <textarea id="translate-text" placeholder="Enter text to translate..." 
+                                      class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500" 
+                                      rows="3">Hello World</textarea>
+                        </div>
+                        <button onclick="translateText()" class="w-full bg-green-500 text-white py-2 rounded-lg hover:bg-green-600 transition">
+                            <i class="fas fa-globe mr-2"></i>Translate Text
+                        </button>
+                        <div id="translation-result" class="hidden p-4 bg-green-50 border border-green-200 rounded-lg">
+                            <div>
+                                <div class="text-sm font-medium text-green-700 mb-2">Translation:</div>
+                                <div class="text-green-800" id="translated-text"></div>
+                                <div class="text-xs text-green-600 mt-2" id="translation-confidence"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
                 <!-- Quick Actions -->
                 <div class="bg-white rounded-lg shadow p-6">
                     <h2 class="text-xl font-bold text-gray-800 mb-4 flex items-center">
@@ -232,6 +328,9 @@
                         </button>
                         <button onclick="viewDonations()" class="bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition text-xs">
                             <i class="fas fa-list mr-1"></i>View Donations
+                        </button>
+                        <button onclick="testCurrencyAndLanguage()" class="bg-emerald-600 text-white py-2 px-3 rounded-lg hover:bg-emerald-700 transition text-xs">
+                            <i class="fas fa-globe mr-1"></i>Test Services
                         </button>
                         <button onclick="clearLogs()" class="bg-gray-600 text-white py-2 px-3 rounded-lg hover:bg-gray-700 transition text-xs">
                             <i class="fas fa-trash mr-1"></i>Clear Logs

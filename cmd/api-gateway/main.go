@@ -87,13 +87,17 @@ func main() {
 		config:             config,
 	}
 
-	// Initialize local services (Auth, User management)
+	// Initialize local services (Auth, User management, Currency, Language)
 	userRepo := repositoryImpl.NewUserRepository(db)
 	platformRepo := repositoryImpl.NewPlatformRepository(db)
+	currencyRepo := repositoryImpl.NewCurrencyRepository(db)
+	languageRepo := repositoryImpl.NewLanguageRepository(db)
 
 	userService := serviceImpl.NewUserService(userRepo)
 	authService := serviceImpl.NewAuthService(config.Auth.JWTSecret, config.Auth.TokenExpiry/3600)
 	platformService := serviceImpl.NewPlatformService()
+	currencyService := service.NewCurrencyService(currencyRepo)
+	languageService := service.NewLanguageService(languageRepo)
 
 	// Create mock donation service for handlers that need it
 	mockDonationService := &MockDonationService{gateway: gateway}
@@ -104,6 +108,8 @@ func main() {
 	authHandler := handler.NewAuthHandler(userService, authService)
 	platformHandler := handler.NewPlatformHandler(platformService, platformRepo)
 	qrisHandler := handler.NewQRISHandler(qrisService, mockDonationService)
+	currencyHandler := handler.NewCurrencyHandler(currencyService)
+	languageHandler := handler.NewLanguageHandler(languageService)
 
 	// Create gateway-specific handlers
 	donationHandler := gateway.NewDonationHandler()
@@ -121,11 +127,9 @@ func main() {
 	// CORS middleware
 	e.Use(middleware.CORSWithConfig(middleware.CORSConfig{
 		AllowOrigins: []string{
-			"http://localhost:8000",
 			"http://localhost:3000",
-			"http://localhost:3001",
-			"http://127.0.0.1:8000",
 			"http://127.0.0.1:3000",
+			"https://localhost:3000",
 		},
 		AllowMethods: []string{
 			"GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS",
@@ -140,7 +144,7 @@ func main() {
 	}))
 
 	// Setup routes
-	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, config.Auth.JWTSecret)
+	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, currencyHandler, languageHandler, config.Auth.JWTSecret)
 
 	// Health check for gateway
 	e.GET("/health", gateway.HealthCheck)
@@ -168,7 +172,7 @@ func (m *MockDonationService) Create(donation *models.Donation) error {
 
 	grpcReq := &pb.CreateDonationRequest{
 		Amount:        donation.Amount,
-		Currency:      donation.Currency,
+		Currency:      string(donation.Currency),
 		Message:       donation.Message,
 		StreamerId:    uint32(donation.StreamerID),
 		DisplayName:   donation.DisplayName,
@@ -218,7 +222,7 @@ func (m *MockDonationService) CreateDonation(req *service.CreateDonationRequest)
 	// Create donation model from response
 	donation := &models.Donation{
 		Amount:      req.Amount,
-		Currency:    req.Currency,
+		Currency:    models.SupportedCurrency(req.Currency),
 		Message:     req.Message,
 		StreamerID:  req.StreamerID,
 		DisplayName: req.DisplayName,
@@ -262,7 +266,7 @@ func (m *MockDonationService) GetByID(id uint) (*models.Donation, error) {
 	// Convert protobuf to model
 	donation := &models.Donation{
 		Amount:      resp.Donation.Amount,
-		Currency:    resp.Donation.Currency,
+		Currency:    models.SupportedCurrency(resp.Donation.Currency),
 		Message:     resp.Donation.Message,
 		StreamerID:  uint(resp.Donation.StreamerId),
 		DonatorID:   uint(resp.Donation.DonatorId),
@@ -306,7 +310,7 @@ func (m *MockDonationService) GetByStreamerID(streamerID uint, page, pageSize in
 	for _, pbDonation := range resp.Donations {
 		donation := &models.Donation{
 			Amount:      pbDonation.Amount,
-			Currency:    pbDonation.Currency,
+			Currency:    models.SupportedCurrency(pbDonation.Currency),
 			Message:     pbDonation.Message,
 			StreamerID:  uint(pbDonation.StreamerId),
 			DonatorID:   uint(pbDonation.DonatorId),

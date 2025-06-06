@@ -47,7 +47,7 @@ func (s *paymentService) InitiatePayment(donation *models.Donation, provider mod
 		return "", errors.New("unsupported payment provider")
 	}
 
-	transactionID, err := processor.ProcessPayment(donation.Amount, donation.Currency, description)
+	transactionID, err := processor.ProcessPayment(donation.Amount, string(donation.Currency), description)
 	if err != nil {
 		return "", err
 	}

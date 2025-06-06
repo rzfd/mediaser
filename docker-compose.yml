@@ -165,59 +165,95 @@ services:
     ports:
       - "8080:8080"
     environment:
-      # Database Configuration (for user management)
-      - DB_HOST=gateway-db
-      - DB_PORT=5432
-      - DB_USERNAME=postgres
-      - DB_PASSWORD=password
-      - DB_NAME=gateway_db
-      
-      # Server Configuration
-      - SERVER_PORT=8080
-      - SERVER_ENV=development
-      
-      # Authentication
-      - JWT_SECRET=your-super-secret-jwt-key-change-in-production
-      - JWT_TOKEN_EXPIRY_HOURS=24
-      
-      # Microservices URLs
       - DONATION_SERVICE_URL=donation-service:9091
       - PAYMENT_SERVICE_URL=payment-service:9092
       - NOTIFICATION_SERVICE_URL=notification-service:9093
+      - CURRENCY_SERVICE_URL=currency-service:8084
+      - LANGUAGE_SERVICE_URL=language-service:8085
+      - DB_HOST=gateway-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=gateway_db
+      - JWT_SECRET=mediashar-secret-key-2024
     depends_on:
-      gateway-db:
-        condition: service_healthy
-      donation-service:
-        condition: service_healthy
-      payment-service:
-        condition: service_healthy
-      notification-service:
-        condition: service_healthy
+      - gateway-db
+      - donation-service
+      - payment-service
+      - notification-service
+      - currency-service
+      - language-service
     restart: unless-stopped
     networks:
       - mediashar_network
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "-O", "/dev/null", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 40s
+    volumes:
+      - ./cmd/api-gateway/configs/config.yaml:/app/config.yaml
 
-  # Frontend
-  frontend:
+  # Currency Service (NEW)
+  currency-service:
+    build:
+      context: .
+      dockerfile: ./build/docker/Dockerfile.currency-service
+    ports:
+      - "8084:8084"
+      - "8094:8094"
+    environment:
+      - GRPC_PORT=8084
+      - HTTP_PORT=8094
+      - DB_HOST=currency-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=currency_db
+      - EXCHANGE_RATE_API_URL=https://v6.exchangerate-api.com/v6/latest
+      - CACHE_TTL=3600
+    depends_on:
+      - currency-db
+    networks:
+      - mediashar_network
+    restart: unless-stopped
+
+  # Language Service (NEW)
+  language-service:
+    build:
+      context: .
+      dockerfile: ./build/docker/Dockerfile.language-service
+    ports:
+      - "8085:8085"
+      - "8095:8095"
+    environment:
+      - GRPC_PORT=8085
+      - HTTP_PORT=8095
+      - DB_HOST=language-db
+      - DB_PORT=5432
+      - DB_USER=postgres
+      - DB_PASSWORD=password
+      - DB_NAME=language_db
+      - LIBRETRANSLATE_API_URL=https://libretranslate.de/translate
+      - TRANSLATION_CACHE_TTL=86400
+    depends_on:
+      - language-db
+    networks:
+      - mediashar_network
+    restart: unless-stopped
+
+  # React Frontend with Currency & Language Features
+  mediashar-frontend:
     build:
       context: ./frontend
       dockerfile: Dockerfile
-      target: production
     container_name: mediashar_frontend
     ports:
-      - "8000:80"
+      - "3000:80"
     environment:
-      - NGINX_HOST=localhost
-      - NGINX_PORT=80
+      - REACT_APP_API_GATEWAY=http://localhost:8080
+      - REACT_APP_BACKEND_URL=http://localhost:8080
+      - REACT_APP_CURRENCY_API=http://localhost:8094
+      - REACT_APP_LANGUAGE_API=http://localhost:8095
     depends_on:
-      api-gateway:
-        condition: service_healthy
+      - api-gateway
+      - currency-service
+      - language-service
     restart: unless-stopped
     networks:
       - mediashar_network
@@ -227,8 +263,6 @@ services:
       timeout: 5s
       retries: 3
       start_period: 10s
-    volumes:
-      - frontend_logs:/var/log/nginx
 
   # pgAdmin for database management
   pgadmin:
@@ -277,12 +311,47 @@ services:
     networks:
       - mediashar_network
 
+  # Currency Database (NEW)
+  currency-db:
+    image: postgres:15-alpine
+    container_name: currency_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: currency_db
+    ports:
+      - "5435:5432"
+    volumes:
+      - currency_db_data:/var/lib/postgresql/data
+      - ./scripts/init-currency-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mediashar_network
+    restart: unless-stopped
+
+  # Language Database (NEW)
+  language-db:
+    image: postgres:15-alpine
+    container_name: language_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: language_db
+    ports:
+      - "5436:5432"
+    volumes:
+      - language_db_data:/var/lib/postgresql/data
+      - ./scripts/init-language-db.sql:/docker-entrypoint-initdb.d/init.sql
+    networks:
+      - mediashar_network
+    restart: unless-stopped
+
 volumes:
   gateway_data:
   donation_data:
   payment_data:
   pgadmin_data:
-  frontend_logs:
+  currency_db_data:
+  language_db_data:
 
 networks:
   mediashar_network:

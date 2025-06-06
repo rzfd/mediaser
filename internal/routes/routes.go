@@ -6,7 +6,7 @@ import (
 )
 
 // SetupRoutes configures all the routes for the application
-func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler *handler.DonationHandler, webhookHandler *handler.WebhookHandler, authHandler *handler.AuthHandler, qrisHandler *handler.QRISHandler, platformHandler *handler.PlatformHandler, midtransHandler *handler.MidtransHandler, jwtSecret string) {
+func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler *handler.DonationHandler, webhookHandler *handler.WebhookHandler, authHandler *handler.AuthHandler, qrisHandler *handler.QRISHandler, platformHandler *handler.PlatformHandler, midtransHandler *handler.MidtransHandler, currencyHandler *handler.CurrencyHandler, languageHandler *handler.LanguageHandler, jwtSecret string) {
 	// Health check routes (no prefix)
 	healthHandler := handler.NewHealthHandler()
 	e.GET("/health", healthHandler.HealthCheck)
@@ -27,4 +27,6 @@ func SetupRoutes(e *echo.Echo, userHandler *handler.UserHandler, donationHandler
 	SetupMidtransRoutes(api, midtransHandler, jwtSecret)
 	SetupWebhookRoutes(api, webhookHandler, qrisHandler)
 	SetupPlatformRoutes(api, platformHandler, jwtSecret)
+	SetupCurrencyRoutes(api, currencyHandler, jwtSecret)
+	SetupLanguageRoutes(api, languageHandler, jwtSecret)
 } 

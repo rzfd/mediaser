@@ -180,7 +180,7 @@ func convertModelToPbDonation(donation *models.Donation) *pb.Donation {
 	pbDonation := &pb.Donation{
 		Id:              uint32(donation.ID),
 		Amount:          donation.Amount,
-		Currency:        donation.Currency,
+		Currency:        string(donation.Currency),
 		Message:         donation.Message,
 		StreamerId:      uint32(donation.StreamerID),
 		DonatorId:       uint32(donation.DonatorID),
