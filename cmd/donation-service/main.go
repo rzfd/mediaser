@@ -18,17 +18,28 @@ import (
 	"github.com/rzfd/mediashar/internal/repository/repositoryImpl"
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
+	"github.com/rzfd/mediashar/pkg/logger"
 	"github.com/rzfd/mediashar/pkg/pb"
 	"github.com/rzfd/mediashar/internal/service"
 )
 
 func main() {
-	log.Println("Starting Donation Microservice...")
+	// Initialize logger
+	loggerConfig := logger.Config{
+		Level:       getEnv("LOG_LEVEL", "info"),
+		Output:      getEnv("LOG_OUTPUT", "stdout"),
+		LogFile:     getEnv("LOG_FILE", "logs/donation-service.log"),
+		ServiceName: "donation-service",
+	}
+	logger.Init(loggerConfig)
+	appLogger := logger.GetLogger()
+
+	appLogger.Info("Starting Donation Microservice...")
 
 	// Load configuration
 	config, err := configs.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		appLogger.Fatal(err, "Failed to load configuration")
 	}
 
 	// Initialize database connection for donations
@@ -43,13 +54,17 @@ func main() {
 		DisableForeignKeyConstraintWhenMigrating: true,
 	})
 	if err != nil {
-		log.Fatalf("Failed to connect to donation database: %v", err)
+		appLogger.Fatal(err, "Failed to connect to donation database")
 	}
+
+	appLogger.Info("Database connected successfully")
 
 	// Run database migrations for donation-related tables only
 	if err := migrateDonationTables(db); err != nil {
-		log.Fatalf("Failed to migrate donation tables: %v", err)
+		appLogger.Fatal(err, "Failed to migrate donation tables")
 	}
+
+	appLogger.Info("Database migrations completed")
 
 	// Initialize donation-specific repositories
 	donationRepo := repositoryImpl.NewDonationRepository(db)
@@ -89,10 +104,11 @@ func main() {
 	reflection.Register(grpcSrv)
 
 	// Graceful shutdown
+	port := getEnv("GRPC_PORT", "9091")
 	go func() {
-		log.Printf("Donation Service listening on port %s", getEnv("GRPC_PORT", "9091"))
+		appLogger.Info("Donation Service listening", "port", port)
 		if err := grpcSrv.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+			appLogger.Fatal(err, "Failed to serve")
 		}
 	}()
 
@@ -101,9 +117,9 @@ func main() {
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("Shutting down Donation Service...")
+	appLogger.Info("Shutting down Donation Service...")
 	grpcSrv.GracefulStop()
-	log.Println("Donation Service stopped")
+	appLogger.Info("Donation Service stopped")
 }
 
 func getEnv(key, defaultValue string) string {

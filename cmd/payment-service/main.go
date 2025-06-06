@@ -18,16 +18,27 @@ import (
 	"github.com/rzfd/mediashar/internal/repository/repositoryImpl"
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
+	"github.com/rzfd/mediashar/pkg/logger"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
 func main() {
-	log.Println("💳 Starting Payment Microservice...")
+	// Initialize logger
+	loggerConfig := logger.Config{
+		Level:       getEnv("LOG_LEVEL", "info"),
+		Output:      getEnv("LOG_OUTPUT", "stdout"),
+		LogFile:     getEnv("LOG_FILE", "logs/payment-service.log"),
+		ServiceName: "payment-service",
+	}
+	logger.Init(loggerConfig)
+	appLogger := logger.GetLogger()
+
+	appLogger.Info("💳 Starting Payment Microservice...")
 
 	// Load configuration
 	config, err := configs.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		appLogger.Fatal(err, "Failed to load configuration")
 	}
 
 	// Initialize database connection for payments

@@ -22,6 +22,7 @@ import (
 	"github.com/rzfd/mediashar/internal/routes"
 	"github.com/rzfd/mediashar/internal/service"
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
+	"github.com/rzfd/mediashar/pkg/logger"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -34,12 +35,22 @@ type APIGateway struct {
 }
 
 func main() {
-	log.Println("Starting API Gateway...")
+	// Initialize logger
+	loggerConfig := logger.Config{
+		Level:       getEnv("LOG_LEVEL", "info"),
+		Output:      getEnv("LOG_OUTPUT", "stdout"),
+		LogFile:     getEnv("LOG_FILE", "logs/api-gateway.log"),
+		ServiceName: "api-gateway",
+	}
+	logger.Init(loggerConfig)
+	appLogger := logger.GetLogger()
+
+	appLogger.Info("Starting API Gateway...")
 
 	// Load configuration
 	config, err := configs.LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		appLogger.Fatal(err, "Failed to load configuration")
 	}
 
 	// Initialize database connection for gateway (user management, auth, etc.)
@@ -52,32 +63,42 @@ func main() {
 
 	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		log.Fatalf("Failed to connect to database: %v", err)
+		appLogger.Fatal(err, "Failed to connect to database")
 	}
+
+	appLogger.Info("Database connected successfully")
 
 	// Run migrations for gateway-specific tables
 	if err := migrateGatewayTables(db); err != nil {
-		log.Fatalf("Failed to migrate gateway tables: %v", err)
+		appLogger.Fatal(err, "Failed to migrate gateway tables")
 	}
+
+	appLogger.Info("Database migrations completed")
 
 	// Connect to microservices
-	donationConn, err := grpc.Dial(getEnv("DONATION_SERVICE_URL", "localhost:9091"), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	donationURL := getEnv("DONATION_SERVICE_URL", "localhost:9091")
+	donationConn, err := grpc.Dial(donationURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to connect to donation service: %v", err)
+		appLogger.Fatal(err, "Failed to connect to donation service", "url", donationURL)
 	}
 	defer donationConn.Close()
+	appLogger.Info("Connected to donation service", "url", donationURL)
 
-	paymentConn, err := grpc.Dial(getEnv("PAYMENT_SERVICE_URL", "localhost:9092"), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	paymentURL := getEnv("PAYMENT_SERVICE_URL", "localhost:9092")
+	paymentConn, err := grpc.Dial(paymentURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to connect to payment service: %v", err)
+		appLogger.Fatal(err, "Failed to connect to payment service", "url", paymentURL)
 	}
 	defer paymentConn.Close()
+	appLogger.Info("Connected to payment service", "url", paymentURL)
 
-	notificationConn, err := grpc.Dial(getEnv("NOTIFICATION_SERVICE_URL", "localhost:9093"), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	notificationURL := getEnv("NOTIFICATION_SERVICE_URL", "localhost:9093")
+	notificationConn, err := grpc.Dial(notificationURL, grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		log.Fatalf("Failed to connect to notification service: %v", err)
+		appLogger.Fatal(err, "Failed to connect to notification service", "url", notificationURL)
 	}
 	defer notificationConn.Close()
+	appLogger.Info("Connected to notification service", "url", notificationURL)
 
 	// Create API Gateway
 	gateway := &APIGateway{
@@ -151,13 +172,17 @@ func main() {
 	e.GET("/services/health", gateway.ServicesHealthCheck)
 
 	// Start server
-	log.Printf("API Gateway starting on port %s", config.Server.Port)
-	log.Printf("Connected to:")
-	log.Printf("   - Donation Service: %s", getEnv("DONATION_SERVICE_URL", "localhost:9091"))
-	log.Printf("   - Payment Service: %s", getEnv("PAYMENT_SERVICE_URL", "localhost:9092"))
-	log.Printf("   - Notification Service: %s", getEnv("NOTIFICATION_SERVICE_URL", "localhost:9093"))
+	port := config.Server.Port
+	appLogger.Info("API Gateway starting", 
+		"port", port,
+		"donation_service", donationURL,
+		"payment_service", paymentURL,
+		"notification_service", notificationURL,
+	)
 
-	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", config.Server.Port)))
+	if err := e.Start(fmt.Sprintf(":%s", port)); err != nil {
+		appLogger.Fatal(err, "Failed to start server", "port", port)
+	}
 }
 
 // MockDonationService implements the donation service interface for backwards compatibility
