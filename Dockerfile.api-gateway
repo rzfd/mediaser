@@ -17,7 +17,7 @@ RUN go mod download
 COPY . .
 
 # Build the API gateway
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-gateway ./cmd/api-gateway
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o api-gateway ./cmd/api-gateway/main.go
 
 # Final stage
 FROM alpine:latest

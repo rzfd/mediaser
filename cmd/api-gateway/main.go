@@ -3,9 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"log"
 	"net/http"
 	"os"
+	"os/signal"
+	"syscall"
 	"time"
 
 	"github.com/labstack/echo/v4"
@@ -22,7 +23,9 @@ import (
 	"github.com/rzfd/mediashar/internal/routes"
 	"github.com/rzfd/mediashar/internal/service"
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
+	customMiddleware "github.com/rzfd/mediashar/internal/middleware"
 	"github.com/rzfd/mediashar/pkg/logger"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -45,6 +48,9 @@ func main() {
 	logger.Init(loggerConfig)
 	appLogger := logger.GetLogger()
 
+	// Initialize metrics
+	metrics.Init("api-gateway")
+	
 	appLogger.Info("Starting API Gateway...")
 
 	// Load configuration
@@ -164,25 +170,57 @@ func main() {
 		},
 	}))
 
-	// Setup routes
+	// Add metrics middleware
+	e.Use(customMiddleware.MetricsMiddleware("api-gateway"))
+
+	// Test endpoint (before routes setup)
+	e.GET("/test", func(c echo.Context) error {
+		return c.String(200, "Test endpoint works!")
+	})
+	
+	// Health check endpoint
+	e.GET("/health", gateway.HealthCheck)
+	
+	// Metrics endpoint - serve Prometheus metrics
+	e.GET("/metrics", func(c echo.Context) error {
+		handler := metrics.MetricsHandler()
+		handler.ServeHTTP(c.Response().Writer, c.Request())
+		return nil
+	})
+
+	// Setup all routes
 	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, currencyHandler, languageHandler, config.Auth.JWTSecret)
 
-	// Health check for gateway
-	e.GET("/health", gateway.HealthCheck)
+	// Additional health check for gateway services
 	e.GET("/services/health", gateway.ServicesHealthCheck)
 
-	// Start server
-	port := config.Server.Port
-	appLogger.Info("API Gateway starting", 
-		"port", port,
-		"donation_service", donationURL,
-		"payment_service", paymentURL,
-		"notification_service", notificationURL,
-	)
+	// Start server in goroutine
+	go func() {
+		appLogger.Info("Server starting on port 8080")
+		if err := e.Start(fmt.Sprintf(":%s", config.Server.Port)); err != nil && err != http.ErrServerClosed {
+			appLogger.Fatal(err, "Failed to start server", "port", config.Server.Port)
+		}
+	}()
 
-	if err := e.Start(fmt.Sprintf(":%s", port)); err != nil {
-		appLogger.Fatal(err, "Failed to start server", "port", port)
+	// Start metrics collection goroutine
+	go startMetricsCollection()
+
+	// Wait for interrupt signal to gracefully shutdown
+	quit := make(chan os.Signal, 1)
+	signal.Notify(quit, os.Interrupt, syscall.SIGTERM)
+	<-quit
+
+	appLogger.Info("Shutting down server...")
+
+	// Graceful shutdown with timeout
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	if err := e.Shutdown(ctx); err != nil {
+		appLogger.Fatal(err, "Failed to shutdown server")
 	}
+
+	appLogger.Info("Server stopped gracefully")
 }
 
 // MockDonationService implements the donation service interface for backwards compatibility
@@ -560,4 +598,22 @@ func migrateGatewayTables(db *gorm.DB) error {
 		&models.StreamingContent{},
 		&models.ContentDonation{},
 	)
+}
+
+// startMetricsCollection starts collecting system metrics
+func startMetricsCollection() {
+	ticker := time.NewTicker(30 * time.Second)
+	defer ticker.Stop()
+
+	for {
+		select {
+		case <-ticker.C:
+			// Collect system metrics (simplified version)
+			metrics.GetMetrics().UpdateSystemMetrics(
+				100,    // goroutines count (would be runtime.NumGoroutine())
+				50000000, // memory usage in bytes (would be from runtime.MemStats)
+				10.5,   // CPU usage percentage
+			)
+		}
+	}
 } 

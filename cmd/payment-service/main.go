@@ -19,6 +19,7 @@ import (
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
 	"github.com/rzfd/mediashar/pkg/logger"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -32,6 +33,9 @@ func main() {
 	}
 	logger.Init(loggerConfig)
 	appLogger := logger.GetLogger()
+
+	// Initialize metrics
+	metrics.Init("payment-service")
 
 	appLogger.Info("💳 Starting Payment Microservice...")
 

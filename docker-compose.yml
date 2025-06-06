@@ -85,12 +85,19 @@ services:
       
       # External Service URLs
       - USER_SERVICE_URL=http://api-gateway:8080
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/donation-service.log
     depends_on:
       donation-db:
         condition: service_healthy
     restart: unless-stopped
     networks:
       - mediashar_network
+    volumes:
+      - app_logs:/app/logs
     healthcheck:
       test: ["CMD-SHELL", "netstat -an | grep :9091 || exit 1"]
       interval: 30s
@@ -122,6 +129,11 @@ services:
       - MIDTRANS_CLIENT_KEY=SB-Mid-client-Yy6kDu1A1cTYWiYy
       - MIDTRANS_SERVER_KEY=SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu
       - MIDTRANS_ENVIRONMENT=sandbox
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/payment-service.log
     depends_on:
       payment-db:
         condition: service_healthy
@@ -146,6 +158,11 @@ services:
       # Service Configuration
       - GRPC_PORT=9093
       - SERVICE_NAME=notification-service
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/notification-service.log
     restart: unless-stopped
     networks:
       - mediashar_network
@@ -176,6 +193,11 @@ services:
       - DB_PASSWORD=password
       - DB_NAME=gateway_db
       - JWT_SECRET=mediashar-secret-key-2024
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/api-gateway.log
     depends_on:
       - gateway-db
       - donation-service
@@ -188,6 +210,7 @@ services:
       - mediashar_network
     volumes:
       - ./cmd/api-gateway/configs/config.yaml:/app/config.yaml
+      - app_logs:/app/logs
 
   # Currency Service (NEW)
   currency-service:
@@ -207,6 +230,11 @@ services:
       - DB_NAME=currency_db
       - EXCHANGE_RATE_API_URL=https://v6.exchangerate-api.com/v6/latest
       - CACHE_TTL=3600
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/currency-service.log
     depends_on:
       - currency-db
     networks:
@@ -231,6 +259,11 @@ services:
       - DB_NAME=language_db
       - LIBRETRANSLATE_API_URL=https://libretranslate.de/translate
       - TRANSLATION_CACHE_TTL=86400
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/language-service.log
     depends_on:
       - language-db
     networks:
@@ -345,6 +378,79 @@ services:
       - mediashar_network
     restart: unless-stopped
 
+  # Monitoring Services
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mediashar_prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus/rules:/etc/prometheus/rules
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=200h'
+      - '--web.enable-lifecycle'
+      - '--web.enable-admin-api'
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mediashar_grafana
+    ports:
+      - "3001:3000"
+    volumes:
+      - ./monitoring/grafana/provisioning/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/provisioning/dashboards:/etc/grafana/provisioning/dashboards
+      - ./monitoring/grafana/dashboards:/var/lib/grafana/dashboards
+      - grafana_data:/var/lib/grafana
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+      - GF_SECURITY_ALLOW_EMBEDDING=true
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel
+    restart: unless-stopped
+    depends_on:
+      - prometheus
+    networks:
+      - mediashar_network
+
+  # PostgreSQL Exporter for database metrics
+  postgres-exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: mediashar_postgres_exporter
+    ports:
+      - "9187:9187"
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:password@gateway-db:5432/gateway_db?sslmode=disable
+    depends_on:
+      - gateway-db
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
+  # Node Exporter for system metrics
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: mediashar_node_exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.rootfs=/host'
+    volumes:
+      - '/:/host:ro,rslave'
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+
 volumes:
   gateway_data:
   donation_data:
@@ -352,6 +458,9 @@ volumes:
   pgadmin_data:
   currency_db_data:
   language_db_data:
+  app_logs:
+  prometheus_data:
+  grafana_data:
 
 networks:
   mediashar_network:

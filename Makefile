@@ -1,7 +1,7 @@
 # MediaShar Microservices Project Makefile
 # Comprehensive task automation for microservices architecture
 
-.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test health-check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open proto-install proto-gen proto-clean
+.PHONY: help build test clean dev docker-build docker-up docker-down docker-test docker-logs swagger platform deps lint fmt vet security install-tools migrate-up migrate-down backup restore quick-test health-check frontend-serve frontend-serve-python frontend-serve-node frontend-dev frontend-test frontend-open proto-install proto-gen proto-clean monitoring-up monitoring-down monitoring-logs metrics-test dev-up dev-down health
 
 # Default target
 .DEFAULT_GOAL := help
@@ -447,6 +447,95 @@ dev-full: ## Start complete microservices environment with frontend
 	@echo ""
 	@echo "$(YELLOW)ℹ️  Run 'make frontend' in another terminal to start frontend$(NC)"
 	@echo "$(YELLOW)ℹ️  Or run 'make frontend-open' to open browser$(NC)"
+
+# MediaShar Monitoring Stack Management
+
+.PHONY: help build up down logs monitoring-up monitoring-down monitoring-logs clean metrics-test dev-up dev-down health
+
+# Default target
+help:
+	@echo "MediaShar Monitoring Stack Commands:"
+	@echo "  make build           - Build all services"
+	@echo "  make up              - Start all services including monitoring"
+	@echo "  make down            - Stop all services"
+	@echo "  make logs            - Show logs for all services"
+	@echo "  make monitoring-up   - Start only monitoring services (Prometheus + Grafana)"
+	@echo "  make monitoring-down - Stop only monitoring services"
+	@echo "  make monitoring-logs - Show monitoring services logs"
+	@echo "  make clean           - Clean up volumes and containers"
+	@echo "  make metrics-test    - Test metrics endpoints"
+
+# Build all services
+build:
+	@echo "🔨 Building MediaShar services..."
+	docker-compose build
+
+# Start all services including monitoring
+up:
+	@echo "🚀 Starting MediaShar with monitoring..."
+	docker-compose up -d
+	@echo "✅ Services started!"
+	@echo "📊 Prometheus: http://localhost:9090"
+	@echo "📈 Grafana: http://localhost:3001 (admin/admin123)"
+	@echo "🌐 Frontend: http://localhost:3000"
+	@echo "🔧 API Gateway: http://localhost:8080"
+
+# Stop all services
+down:
+	@echo "🛑 Stopping all services..."
+	docker-compose down
+
+# Show logs for all services
+logs:
+	docker-compose logs -f
+
+# Start only monitoring services
+monitoring-up:
+	@echo "📊 Starting monitoring services..."
+	docker-compose up -d prometheus grafana postgres-exporter node-exporter
+	@echo "✅ Monitoring services started!"
+	@echo "📊 Prometheus: http://localhost:9090"
+	@echo "📈 Grafana: http://localhost:3001 (admin/admin123)"
+
+# Stop only monitoring services
+monitoring-down:
+	@echo "🛑 Stopping monitoring services..."
+	docker-compose stop prometheus grafana postgres-exporter node-exporter
+
+# Show monitoring services logs
+monitoring-logs:
+	docker-compose logs -f prometheus grafana postgres-exporter node-exporter
+
+# Clean up everything
+clean:
+	@echo "🧹 Cleaning up containers and volumes..."
+	docker-compose down -v
+	docker system prune -f
+	@echo "✅ Cleanup completed!"
+
+# Test metrics endpoints
+metrics-test:
+	@echo "🧪 Testing metrics endpoints..."
+	@echo "API Gateway metrics:"
+	@curl -s http://localhost:8080/metrics | head -10 || echo "❌ API Gateway metrics not available"
+	@echo "\nPrometheus targets:"
+	@curl -s http://localhost:9090/api/v1/targets | jq '.data.activeTargets[].health' 2>/dev/null || echo "❌ Prometheus not available"
+
+# Development helpers
+dev-up:
+	@echo "🔧 Starting development environment..."
+	docker-compose up -d gateway-db donation-db payment-db prometheus grafana
+	@echo "✅ Development databases and monitoring ready!"
+
+dev-down:
+	docker-compose stop gateway-db donation-db payment-db prometheus grafana
+
+# Check service health
+health:
+	@echo "🏥 Checking service health..."
+	@curl -s http://localhost:8080/health | jq . || echo "❌ API Gateway not healthy"
+	@curl -s http://localhost:9090/-/healthy || echo "❌ Prometheus not healthy"
+	@curl -s http://localhost:3001/api/health || echo "❌ Grafana not healthy"
 
 .PHONY: build clean test run deps \
 	build-microservices build-donation-service build-payment-service build-notification-service build-api-gateway \

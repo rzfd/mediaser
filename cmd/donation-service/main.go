@@ -19,6 +19,7 @@ import (
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
 	"github.com/rzfd/mediashar/pkg/logger"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 	"github.com/rzfd/mediashar/internal/service"
 )
@@ -33,6 +34,9 @@ func main() {
 	}
 	logger.Init(loggerConfig)
 	appLogger := logger.GetLogger()
+
+	// Initialize metrics
+	metrics.Init("donation-service")
 
 	appLogger.Info("Starting Donation Microservice...")
 
