@@ -11,6 +11,10 @@ let lastOrderId = null;
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('🚀 DOM Content Loaded - Initializing...');
+    
+    // Message handling is now managed by SnapHandler
+    
     checkHealth();
     
     // If token exists, try to get user profile
@@ -18,11 +22,44 @@ document.addEventListener('DOMContentLoaded', function() {
         getUserProfile();
     }
     
+    // Wait a bit for DOM to be fully ready, then load streamers
+    setTimeout(() => {
+        console.log('⏰ Loading streamers after timeout...');
+        window.loadStreamers();
+    }, 1000);
+    
     updateSessionData();
     
     // Auto-refresh health status every 30 seconds
     setInterval(checkHealth, 30000);
+    
+    // Add event listener for Load Streamers button
+    const loadStreamersBtn = document.getElementById('load-streamers-btn');
+    if (loadStreamersBtn) {
+        loadStreamersBtn.addEventListener('click', function() {
+            console.log('🔄 Load Streamers button clicked');
+            window.loadStreamers();
+        });
+    }
+    
+    // Clean up event listeners on page unload
+    window.addEventListener('beforeunload', function() {
+        // Clean up any pending promises or callbacks
+        console.log('🧹 Cleaning up before page unload');
+    });
 });
+
+// Override console errors to catch and handle Snap.js related errors
+const originalError = console.error;
+console.error = function(...args) {
+    const errorMsg = args.join(' ');
+    if (errorMsg.includes('message channel closed') || 
+        errorMsg.includes('asynchronous response')) {
+        console.warn('Handled Snap.js communication error:', errorMsg);
+        return;
+    }
+    originalError.apply(console, args);
+};
 
 // Utility Functions
 function showNotification(message, type = 'info') {
@@ -104,6 +141,81 @@ function addTestResult(test, success, message = '') {
         <span><strong>${test}</strong> ${message ? `- ${message}` : ''}</span>
     `;
     resultsContainer.appendChild(result);
+}
+
+// Load streamers for dropdown
+window.loadStreamers = async function loadStreamers() {
+    console.log('🔄 Loading streamers...');
+    try {
+        console.log('📡 Making API request to /streamers');
+        const response = await apiRequest('/streamers', 'GET');
+        console.log('📥 API Response:', response);
+        
+        const streamers = response.data || response;
+        console.log('📋 Streamers data:', streamers);
+        
+        const streamerSelect = document.getElementById('streamer-id');
+        console.log('🎯 Streamer select element:', streamerSelect);
+        
+        if (!streamerSelect) {
+            console.error('❌ Streamer select element not found!');
+            return;
+        }
+        
+        // Clear existing options except the first one
+        streamerSelect.innerHTML = '<option value="">Select Streamer...</option>';
+        
+        // Add streamers to dropdown
+        if (Array.isArray(streamers) && streamers.length > 0) {
+            streamers.forEach((streamer, index) => {
+                console.log(`➕ Adding streamer ${index + 1}:`, streamer);
+                const option = document.createElement('option');
+                option.value = streamer.id;
+                option.textContent = `${streamer.username}${streamer.full_name ? ' - ' + streamer.full_name : ''}`;
+                streamerSelect.appendChild(option);
+            });
+            
+            console.log(`✅ Loaded ${streamers.length} streamers successfully`);
+            showNotification(`Loaded ${streamers.length} streamers`, 'success');
+        } else {
+            console.warn('⚠️ No streamers found in response');
+            showNotification('No streamers available', 'warning');
+        }
+        
+        // Add refresh button if not exists
+        window.addStreamerRefreshButton();
+        
+    } catch (error) {
+        console.error('❌ Failed to load streamers:', error);
+        showNotification(`Failed to load streamers: ${error.message}`, 'error');
+        
+        // Add refresh button even on error
+        window.addStreamerRefreshButton();
+    }
+}
+
+// Add refresh button next to streamer dropdown
+window.addStreamerRefreshButton = function addStreamerRefreshButton() {
+    const streamerSelect = document.getElementById('streamer-id');
+    const container = streamerSelect.parentNode;
+    
+    // Check if refresh button already exists
+    if (container.querySelector('.streamer-refresh-btn')) {
+        return;
+    }
+    
+    const refreshBtn = document.createElement('button');
+    refreshBtn.className = 'streamer-refresh-btn px-3 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition text-sm';
+    refreshBtn.innerHTML = '<i class="fas fa-sync-alt"></i>';
+    refreshBtn.title = 'Refresh Streamers';
+    refreshBtn.onclick = function(e) {
+        e.preventDefault();
+        window.loadStreamers();
+        showNotification('Refreshing streamers...', 'info');
+    };
+    
+    // Add refresh button to the container
+    container.appendChild(refreshBtn);
 }
 
 // API Functions
@@ -358,13 +470,14 @@ async function createDonation() {
     
     const amount = parseFloat(document.getElementById('donation-amount').value);
     const currency = document.getElementById('donation-currency').value;
-    const streamerId = parseInt(document.getElementById('streamer-id').value);
+    const streamerSelect = document.getElementById('streamer-id');
+    const streamerId = parseInt(streamerSelect.value);
     const message = document.getElementById('donation-message').value;
     const displayName = document.getElementById('display-name').value;
     const isAnonymous = document.getElementById('is-anonymous').checked;
     
     if (!amount || !streamerId) {
-        showNotification('Please fill amount and streamer ID', 'error');
+        showNotification('Please fill amount and select a streamer', 'error');
         return;
     }
     
@@ -426,36 +539,64 @@ async function createPayment() {
     }
 }
 
-function openSnapPayment() {
+async function openSnapPayment() {
     if (!lastSnapToken) {
         showNotification('No snap token available. Create payment first.', 'error');
         return;
     }
     
-    snap.pay(lastSnapToken, {
-        onSuccess: function(result) {
-            showNotification('Payment successful!', 'success');
-            addTestResult('Snap Payment', true, 'Payment completed successfully');
-            console.log('Payment Success:', result);
-            logResponse('Snap Payment Success', 'CALLBACK', null, result, true);
-        },
-        onPending: function(result) {
-            showNotification('Payment pending', 'warning');
-            addTestResult('Snap Payment', true, 'Payment is pending');
-            console.log('Payment Pending:', result);
-            logResponse('Snap Payment Pending', 'CALLBACK', null, result, true);
-        },
-        onError: function(result) {
-            showNotification('Payment failed', 'error');
-            addTestResult('Snap Payment', false, 'Payment failed');
-            console.log('Payment Error:', result);
-            logResponse('Snap Payment Error', 'CALLBACK', null, result, false);
-        },
-        onClose: function() {
-            showNotification('Payment popup closed', 'info');
-            console.log('Payment popup closed');
+    // Check if SnapHandler is ready
+    if (!window.snapHandler || !window.snapHandler.isReady()) {
+        showNotification('Snap.js is not ready. Please wait and try again.', 'error');
+        return;
+    }
+    
+    try {
+        const result = await window.snapHandler.pay(lastSnapToken, {
+            onSuccess: function(result) {
+                showNotification('Payment successful!', 'success');
+                addTestResult('Snap Payment', true, 'Payment completed successfully');
+                console.log('Payment Success:', result);
+                logResponse('Snap Payment Success', 'CALLBACK', null, result, true);
+            },
+            onPending: function(result) {
+                showNotification('Payment pending', 'warning');
+                addTestResult('Snap Payment', true, 'Payment is pending');
+                console.log('Payment Pending:', result);
+                logResponse('Snap Payment Pending', 'CALLBACK', null, result, true);
+            },
+            onError: function(result) {
+                showNotification('Payment failed', 'error');
+                addTestResult('Snap Payment', false, 'Payment failed');
+                console.log('Payment Error:', result);
+                logResponse('Snap Payment Error', 'CALLBACK', null, result, false);
+            },
+            onClose: function() {
+                showNotification('Payment popup closed', 'info');
+                console.log('Payment popup closed');
+            }
+        });
+        
+        // Handle the result
+        switch (result.type) {
+            case 'success':
+                showNotification('Payment completed successfully!', 'success');
+                addTestResult('Snap Payment Result', true, 'Payment successful');
+                break;
+            case 'pending':
+                showNotification('Payment is being processed', 'warning');
+                addTestResult('Snap Payment Result', true, 'Payment pending');
+                break;
+            case 'closed':
+                showNotification('Payment popup was closed', 'info');
+                break;
         }
-    });
+        
+    } catch (error) {
+        console.error('Error opening Snap payment:', error);
+        showNotification(`Failed to process payment: ${error.message}`, 'error');
+        addTestResult('Snap Payment', false, error.message);
+    }
 }
 
 // Test Functions
@@ -495,11 +636,24 @@ async function fullFlowTest() {
             addTestResult('Auto Login', true);
         }
         
+        // 4. Get available streamer ID from dropdown
+        const streamerSelect = document.getElementById('streamer-id');
+        let streamerId = parseInt(streamerSelect.value);
+        
+        // If no streamer selected, try to use the first available one
+        if (!streamerId && streamerSelect.options.length > 1) {
+            streamerId = parseInt(streamerSelect.options[1].value);
+        }
+        
+        if (!streamerId) {
+            throw new Error('No streamers available. Please create a streamer first.');
+        }
+        
         // 4. Create Donation
         const donationResponse = await apiRequest('/donations', 'POST', {
             amount: 75000,
             currency: 'IDR',
-            streamer_id: 1,
+            streamer_id: streamerId,
             message: 'Full flow test donation',
             display_name: 'Test Supporter',
             is_anonymous: false
@@ -555,6 +709,9 @@ async function loadTestData() {
         } catch (e) {
             // User might already exist
         }
+        
+        // Reload streamers dropdown after creating test data
+        await window.loadStreamers();
         
         showNotification('Test data loaded successfully!', 'success');
         addTestResult('Load Test Data', true, 'Test users created');

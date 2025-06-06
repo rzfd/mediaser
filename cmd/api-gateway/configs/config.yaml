@@ -1,0 +1,27 @@
+server:
+  port: "8080"
+  env: "development"
+
+db:
+  host: "localhost"
+  port: "5432"
+  username: "postgres"
+  password: "password"
+  name: "donation_system"
+
+auth:
+  jwtSecret: "your-jwt-secret-key"
+  tokenExpiry: 86400  # 24 hours in seconds
+
+payment:
+  paypalClientID: "your-paypal-client-id"
+  paypalClientSecret: "your-paypal-client-secret"
+  stripeSecretKey: "your-stripe-secret-key"
+  webhookSecret: "your-webhook-secret"
+
+midtrans:
+  merchantID: "G454372620"
+  clientKey: "SB-Mid-client-Yy6kDu1A1cTYWiYy"
+  serverKey: "SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu"
+  environment: "sandbox"  # sandbox or production
+  webhookSecret: ""  # Optional webhook secret 

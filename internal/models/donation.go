@@ -28,10 +28,10 @@ type Donation struct {
 	Amount          float64         `json:"amount" gorm:"not null"`
 	Currency        string          `json:"currency" gorm:"default:'USD'"`
 	Message         string          `json:"message"`
-	DonatorID       uint            `json:"donator_id" gorm:"not null"`
-	Donator         User            `json:"donator,omitempty" gorm:"foreignKey:DonatorID"`
-	StreamerID      uint            `json:"streamer_id" gorm:"not null"`
-	Streamer        User            `json:"streamer,omitempty" gorm:"foreignKey:StreamerID"`
+	DonatorID       uint            `json:"donator_id" gorm:"not null;index"` // No foreign key constraint for microservices
+	Donator         User            `json:"donator,omitempty" gorm:"-"` // Excluded from database, handled at application level
+	StreamerID      uint            `json:"streamer_id" gorm:"not null;index"` // No foreign key constraint for microservices
+	Streamer        User            `json:"streamer,omitempty" gorm:"-"` // Excluded from database, handled at application level
 	Status          PaymentStatus   `json:"status" gorm:"default:'pending'"`
 	PaymentProvider PaymentProvider `json:"payment_provider"`
 	TransactionID   string          `json:"transaction_id"`

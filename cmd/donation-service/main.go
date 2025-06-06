@@ -19,6 +19,7 @@ import (
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
 	"github.com/rzfd/mediashar/pkg/pb"
+	"github.com/rzfd/mediashar/internal/service"
 )
 
 func main() {
@@ -38,7 +39,9 @@ func main() {
 		getEnv("DONATION_DB_NAME", "donation_db"),
 		getEnv("DONATION_DB_PORT", config.DB.Port))
 	
-	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{
+		DisableForeignKeyConstraintWhenMigrating: true,
+	})
 	if err != nil {
 		log.Fatalf("Failed to connect to donation database: %v", err)
 	}
@@ -50,9 +53,25 @@ func main() {
 
 	// Initialize donation-specific repositories
 	donationRepo := repositoryImpl.NewDonationRepository(db)
+	userRepo := repositoryImpl.NewUserRepository(db)
+	userCacheRepo := repositoryImpl.NewUserCacheRepository(db)
 	
-	// Initialize donation service
-	donationService := serviceImpl.NewDonationService(donationRepo)
+	// Initialize User Service client for external API calls
+	userServiceURL := getEnv("USER_SERVICE_URL", "http://localhost:8080")
+	userClient := serviceImpl.NewHTTPUserServiceClient(userServiceURL)
+	
+	// Initialize user aggregator service (combines cache + API calls)
+	userAggregator := service.NewUserAggregatorService(userCacheRepo, userClient)
+	
+	log.Printf("DEBUG: Created donationRepo: %v", donationRepo != nil)
+	log.Printf("DEBUG: Created userRepo: %v", userRepo != nil)
+	log.Printf("DEBUG: Created userAggregator: %v", userAggregator != nil)
+	log.Printf("DEBUG: User Service URL: %s", userServiceURL)
+	
+	// Initialize donation service with user aggregator
+	donationService := serviceImpl.NewDonationServiceWithUserAggregator(donationRepo, userRepo, userAggregator)
+	
+	log.Printf("DEBUG: Created donationService: %v", donationService != nil)
 
 	// Create gRPC server
 	lis, err := net.Listen("tcp", ":"+getEnv("GRPC_PORT", "9091"))
@@ -95,9 +114,56 @@ func getEnv(key, defaultValue string) string {
 }
 
 func migrateDonationTables(db *gorm.DB) error {
+	// First, drop existing foreign key constraints if they exist
+	if err := dropExistingForeignKeys(db); err != nil {
+		log.Printf("Warning: Could not drop existing foreign keys: %v", err)
+	}
+	
+	// For PostgreSQL, we don't need to disable foreign key checks like MySQL
+	// Instead, we'll configure GORM to not create foreign key constraints
+	
+	// Create a new session with custom configuration
+	migrator := db.Session(&gorm.Session{})
+	
 	// Only migrate donation-related tables
-	return db.AutoMigrate(
-		&models.Donation{},
-		&models.User{}, // Still needed for foreign key relationships
+	err := migrator.AutoMigrate(
+		&models.User{},      // User table without FK relationships 
+		&models.UserCache{}, // Cached user data for performance
+		&models.Donation{},  // Donation table without FK relationships
 	)
+	
+	if err != nil {
+		return err
+	}
+	
+	log.Println("✅ Database migration completed successfully without foreign key constraints")
+	return nil
+}
+
+func dropExistingForeignKeys(db *gorm.DB) error {
+	// Drop foreign key constraints that might have been created by previous migrations
+	constraints := []string{
+		"fk_users_donations",
+		"fk_users_received",
+		"fk_donations_donator",
+		"fk_donations_streamer",
+		"fk_donations_users",
+	}
+	
+	for _, constraint := range constraints {
+		// Try to drop the constraint, ignore error if it doesn't exist
+		if err := db.Exec(fmt.Sprintf("ALTER TABLE donations DROP CONSTRAINT IF EXISTS %s", constraint)).Error; err != nil {
+			log.Printf("Info: Could not drop constraint %s (might not exist): %v", constraint, err)
+		} else {
+			log.Printf("✅ Dropped foreign key constraint: %s", constraint)
+		}
+	}
+	
+	// Also try to clean up any existing data that might conflict
+	log.Println("🧹 Cleaning up donation table to prevent constraint conflicts...")
+	
+	// Don't truncate as we want to preserve data, just ensure consistency
+	log.Println("✅ Foreign key cleanup completed")
+	
+	return nil
 } 

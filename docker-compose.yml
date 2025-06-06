@@ -82,6 +82,9 @@ services:
       # Service Configuration
       - GRPC_PORT=9091
       - SERVICE_NAME=donation-service
+      
+      # External Service URLs
+      - USER_SERVICE_URL=http://api-gateway:8080
     depends_on:
       donation-db:
         condition: service_healthy
@@ -232,15 +235,15 @@ services:
     image: dpage/pgadmin4:latest
     container_name: mediashar_pgadmin
     environment:
-      PGADMIN_DEFAULT_EMAIL: admin@mediashar.com
-      PGADMIN_DEFAULT_PASSWORD: admin123
-      PGADMIN_CONFIG_SERVER_MODE: 'False'
-      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'False'
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: 123
+      PGADMIN_CONFIG_SERVER_MODE: 'True'
+      PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED: 'True'
     ports:
       - "8082:80"
     volumes:
       - pgadmin_data:/var/lib/pgadmin
-      - ./pgadmin/servers-microservices.json:/pgadmin4/servers.json
+      - ./pgadmin/servers.json:/pgadmin4/servers.json
     depends_on:
       - gateway-db
       - donation-db

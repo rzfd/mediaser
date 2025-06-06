@@ -5,7 +5,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MediaShar - Midtrans Integration Test</title>
     <script src="https://app.sandbox.midtrans.com/snap/snap.js" 
-            data-client-key="SB-Mid-client-Yy6kDu1ATcTYWiYy"></script>
+            data-client-key="SB-Mid-client-Yy6kDu1A1cTYWiYy"
+            onload="console.log('✅ Snap.js loaded successfully')"
+            onerror="console.error('❌ Failed to load Snap.js')"></script>
+    <script src="snap-handler.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
@@ -169,8 +172,14 @@
                                 <option value="USD">USD (US Dollar)</option>
                             </select>
                         </div>
-                        <input type="number" id="streamer-id" placeholder="Streamer ID" value="1"
-                               class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                        <div class="flex items-center space-x-2">
+                            <select id="streamer-id" class="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
+                                <option value="">Select Streamer...</option>
+                            </select>
+                            <button onclick="loadStreamers()" class="bg-orange-500 text-white px-4 py-2 rounded-lg hover:bg-orange-600 transition text-sm">
+                                <i class="fas fa-users mr-1"></i>Load
+                            </button>
+                        </div>
                         <input type="text" id="donation-message" placeholder="Donation Message" value="Test donation from frontend"
                                class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-blue-500">
                         <input type="text" id="display-name" placeholder="Display Name" value="Anonymous Supporter"
@@ -211,18 +220,21 @@
                         Quick Actions
                     </h2>
                     
-                    <div class="grid grid-cols-2 gap-4">
-                        <button onclick="fullFlowTest()" class="bg-purple-600 text-white py-2 rounded-lg hover:bg-purple-700 transition">
-                            <i class="fas fa-play mr-2"></i>Full Flow Test
+                    <div class="flex flex-wrap gap-2 justify-center">
+                        <button onclick="fullFlowTest()" class="bg-purple-600 text-white py-2 px-3 rounded-lg hover:bg-purple-700 transition text-xs">
+                            <i class="fas fa-play mr-1"></i>Full Flow Test
                         </button>
-                        <button onclick="loadTestData()" class="bg-indigo-600 text-white py-2 rounded-lg hover:bg-indigo-700 transition">
-                            <i class="fas fa-database mr-2"></i>Load Test Data
+                        <button onclick="loadTestData()" class="bg-indigo-600 text-white py-2 px-3 rounded-lg hover:bg-indigo-700 transition text-xs">
+                            <i class="fas fa-database mr-1"></i>Load Test Data
                         </button>
-                        <button onclick="viewDonations()" class="bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition">
-                            <i class="fas fa-list mr-2"></i>View Donations
+                        <button id="load-streamers-btn" class="bg-orange-600 text-white py-2 px-3 rounded-lg hover:bg-orange-700 transition text-xs">
+                            <i class="fas fa-users mr-1"></i>Load Streamers
                         </button>
-                        <button onclick="clearLogs()" class="bg-gray-600 text-white py-2 rounded-lg hover:bg-gray-700 transition">
-                            <i class="fas fa-trash mr-2"></i>Clear Logs
+                        <button onclick="viewDonations()" class="bg-blue-600 text-white py-2 px-3 rounded-lg hover:bg-blue-700 transition text-xs">
+                            <i class="fas fa-list mr-1"></i>View Donations
+                        </button>
+                        <button onclick="clearLogs()" class="bg-gray-600 text-white py-2 px-3 rounded-lg hover:bg-gray-700 transition text-xs">
+                            <i class="fas fa-trash mr-1"></i>Clear Logs
                         </button>
                     </div>
                 </div>
@@ -294,6 +306,6 @@
         </div>
     </div>
 
-    <script src="script.js"></script>
+    <script src="script.js?v=20250606"></script>
 </body>
 </html> 

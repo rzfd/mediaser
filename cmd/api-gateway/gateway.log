@@ -1,0 +1,17 @@
+2025/06/07 00:24:17 🌐 Starting API Gateway...
+2025/06/07 00:24:18 🚀 API Gateway starting on port 8080
+2025/06/07 00:24:18 🔗 Connected to:
+2025/06/07 00:24:18    - Donation Service: localhost:9091
+2025/06/07 00:24:18    - Payment Service: localhost:9092
+2025/06/07 00:24:18    - Notification Service: localhost:9093
+
+   ____    __
+  / __/___/ /  ___
+ / _// __/ _ \/ _ \
+/___/\__/_//_/\___/ v4.11.4
+High performance, minimalist Go web framework
+https://echo.labstack.com
+____________________________________O/_______
+                                    O\
+{"time":"2025-06-07T00:24:18.498093338+07:00","level":"FATAL","prefix":"echo","file":"main.go","line":"156","message":"listen tcp :8080: bind: address already in use"}
+exit status 1

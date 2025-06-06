@@ -50,9 +50,10 @@ func main() {
 
 	// Initialize payment-specific repositories (we'll need to create these)
 	donationRepo := repositoryImpl.NewDonationRepository(db) // For updating payment status
+	userRepo := repositoryImpl.NewUserRepository(db)         // For user data
 	
 	// Initialize payment services
-	donationService := serviceImpl.NewDonationService(donationRepo)
+	donationService := serviceImpl.NewDonationService(donationRepo, userRepo)
 	paymentService := serviceImpl.NewPaymentService(config, donationService, nil, nil, nil)
 
 	// Create gRPC server

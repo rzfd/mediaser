@@ -20,7 +20,8 @@ func (r *donationRepository) Create(donation *models.Donation) error {
 
 func (r *donationRepository) GetByID(id uint) (*models.Donation, error) {
 	var donation models.Donation
-	err := r.db.Preload("Donator").Preload("Streamer").First(&donation, id).Error
+	// Remove Preload for Donator and Streamer since they are excluded from GORM with gorm:"-"
+	err := r.db.First(&donation, id).Error
 	if err != nil {
 		return nil, err
 	}
@@ -46,8 +47,7 @@ func (r *donationRepository) Delete(id uint) error {
 
 func (r *donationRepository) List(offset, limit int) ([]*models.Donation, error) {
 	var donations []*models.Donation
-	err := r.db.Preload("Donator").Preload("Streamer").
-		Offset(offset).Limit(limit).
+	err := r.db.Offset(offset).Limit(limit).
 		Order("created_at DESC").
 		Find(&donations).Error
 	return donations, err
@@ -55,8 +55,7 @@ func (r *donationRepository) List(offset, limit int) ([]*models.Donation, error)
 
 func (r *donationRepository) GetByDonatorID(donatorID uint, offset, limit int) ([]*models.Donation, error) {
 	var donations []*models.Donation
-	err := r.db.Preload("Streamer").
-		Where("donator_id = ?", donatorID).
+	err := r.db.Where("donator_id = ?", donatorID).
 		Offset(offset).Limit(limit).
 		Order("created_at DESC").
 		Find(&donations).Error
@@ -65,8 +64,7 @@ func (r *donationRepository) GetByDonatorID(donatorID uint, offset, limit int) (
 
 func (r *donationRepository) GetByStreamerID(streamerID uint, offset, limit int) ([]*models.Donation, error) {
 	var donations []*models.Donation
-	err := r.db.Preload("Donator").
-		Where("streamer_id = ?", streamerID).
+	err := r.db.Where("streamer_id = ?", streamerID).
 		Offset(offset).Limit(limit).
 		Order("created_at DESC").
 		Find(&donations).Error
@@ -79,8 +77,7 @@ func (r *donationRepository) UpdateStatus(id uint, status models.PaymentStatus) 
 
 func (r *donationRepository) GetLatestDonations(limit int) ([]*models.Donation, error) {
 	var donations []*models.Donation
-	err := r.db.Preload("Donator").Preload("Streamer").
-		Where("status = ?", models.PaymentCompleted).
+	err := r.db.Where("status = ?", models.PaymentCompleted).
 		Order("created_at DESC").
 		Limit(limit).
 		Find(&donations).Error

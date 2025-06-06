@@ -22,6 +22,6 @@ payment:
 midtrans:
   merchantID: "G454372620"
   clientKey: "SB-Mid-client-Yy6kDu1A1cTYWiYy"
-  serverKey: "SB-Mid-server-Zz8uCQ5-zrUcEbes_eijanu"
+  serverKey: "SB-Mid-server-Zz8uCQ5-zrUcEEbes_ejiqnu"
   environment: "sandbox"  # sandbox or production
   webhookSecret: ""  # Optional webhook secret 

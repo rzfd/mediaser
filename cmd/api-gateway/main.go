@@ -187,6 +187,7 @@ func (m *MockDonationService) Create(donation *models.Donation) error {
 
 	// Update the donation with the response
 	donation.ID = uint(resp.DonationId)
+	fmt.Printf("✅ Created donation with ID: %d\n", donation.ID)
 	return nil
 }
 
@@ -237,12 +238,27 @@ func (m *MockDonationService) GetByID(id uint) (*models.Donation, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
 	defer cancel()
 
+	// Add logging for debugging
+	fmt.Printf("🔍 MockDonationService.GetByID called with ID: %d\n", id)
+	
+	if m.gateway.donationClient == nil {
+		fmt.Println("❌ Donation client is nil")
+		return nil, fmt.Errorf("donation service not available")
+	}
+
 	resp, err := m.gateway.donationClient.GetDonation(ctx, &pb.GetDonationRequest{
 		DonationId: uint32(id),
 	})
 	if err != nil {
-		return nil, err
+		fmt.Printf("❌ gRPC GetDonation failed: %v\n", err)
+		
+		// IMPROVED: Try to get the real donation data first by calling donation creation endpoint
+		// or return an error instead of hardcoded mock data
+		return nil, fmt.Errorf("donation not found or service unavailable: %w", err)
 	}
+
+	fmt.Printf("✅ gRPC GetDonation succeeded for ID: %d\n", id)
+	fmt.Printf("📊 Retrieved donation: Amount=%.2f, Currency=%s\n", resp.Donation.Amount, resp.Donation.Currency)
 
 	// Convert protobuf to model
 	donation := &models.Donation{
@@ -424,12 +440,27 @@ func (m *MockMidtransService) GetTransactionStatus(orderID string) (*service.Mid
 }
 
 func (m *MockMidtransService) ProcessDonationPayment(donation *models.Donation) (*service.MidtransPaymentResponse, error) {
-	// Implement via payment service gRPC
-	return &service.MidtransPaymentResponse{
-		Token:       "mock-token",
-		RedirectURL: "https://app.sandbox.midtrans.com/snap/v1/transactions/mock-token",
-		OrderID:     fmt.Sprintf("DON-%d", donation.ID),
-	}, nil
+	fmt.Printf("💰 MockMidtransService.ProcessDonationPayment called for donation ID: %d\n", donation.ID)
+	
+	// Load config for Midtrans credentials
+	config, err := configs.LoadConfig()
+	if err != nil {
+		fmt.Printf("❌ Failed to load config: %v\n", err)
+		return nil, fmt.Errorf("failed to load configuration: %w", err)
+	}
+	
+	// Create real Midtrans service
+	realMidtransService := serviceImpl.NewMidtransService(config, &MockDonationService{gateway: m.gateway})
+	
+	// Call the real Midtrans API
+	response, err := realMidtransService.ProcessDonationPayment(donation)
+	if err != nil {
+		fmt.Printf("❌ Real Midtrans API call failed: %v\n", err)
+		return nil, fmt.Errorf("failed to create Midtrans payment: %w", err)
+	}
+	
+	fmt.Printf("✅ Real Midtrans API call succeeded - Token: %s\n", response.Token[:20]+"...")
+	return response, nil
 }
 
 func (gw *APIGateway) HealthCheck(c echo.Context) error {
