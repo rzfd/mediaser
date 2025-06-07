@@ -1,37 +1,41 @@
 # Frontend Dockerfile
-# Multi-stage build for efficient static file serving
+# Multi-stage build for React application
 
 # Build stage
 FROM node:18-alpine AS build
 
 WORKDIR /app
 
-# Copy package.json
-COPY package.json ./
+# Copy package files
+COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm install --only=production
 
 # Copy source code
 COPY . .
 
-# Build the app
+# Build the React app
 RUN npm run build
 
 # Production stage
 FROM nginx:alpine
 
-# Copy build files to nginx
+# Remove default nginx static assets
+RUN rm -rf /usr/share/nginx/html/*
+
+# Copy build files from React app
 COPY --from=build /app/build /usr/share/nginx/html
 
-# Copy nginx configuration
-COPY nginx.conf /etc/nginx/nginx.conf
+# Copy custom nginx configuration
+COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Expose port
+# Expose port 80
 EXPOSE 80
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD curl -f http://localhost/ || exit 1
 
+# Start nginx
 CMD ["nginx", "-g", "daemon off;"] 

@@ -3,6 +3,9 @@ import { Link, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { Menu, X, Globe, DollarSign, User, LogOut } from 'lucide-react';
 
+// Context
+import { useAuth } from '../../contexts/AuthContext';
+
 // UI Components
 import LanguageSelector from '../ui/LanguageSelector';
 import CurrencySelector from '../ui/CurrencySelector';
@@ -12,10 +15,7 @@ const Navbar = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const { t } = useTranslation();
   const location = useLocation();
-
-  // Mock user data - replace with actual auth context
-  const user = JSON.parse(localStorage.getItem('mediashar-user') || 'null');
-  const isAuthenticated = !!user;
+  const { user, isAuthenticated, logout } = useAuth();
 
   const navItems = [
     { path: '/', label: t('navigation.home') },
@@ -28,8 +28,8 @@ const Navbar = () => {
   };
 
   const handleLogout = () => {
-    localStorage.removeItem('mediashar-token');
-    localStorage.removeItem('mediashar-user');
+    logout();
+    setIsUserMenuOpen(false);
     window.location.href = '/';
   };
 

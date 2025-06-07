@@ -3,9 +3,15 @@ import { Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { useTranslation } from 'react-i18next';
 
+// Context Providers
+import { AuthProvider, useAuth } from './contexts/AuthContext';
+
 // Layout Components
 import Navbar from './components/layout/Navbar';
 import Footer from './components/layout/Footer';
+
+// UI Components
+import LoadingSpinner from './components/ui/LoadingSpinner';
 
 // Page Components
 import HomePage from './pages/HomePage';
@@ -19,13 +25,27 @@ import RegisterPage from './pages/auth/RegisterPage';
 import CurrencyConverter from './components/features/CurrencyConverter';
 import LanguageTranslator from './components/features/LanguageTranslator';
 
-function App() {
+// App Content Component (needs to be inside AuthProvider)
+function AppContent() {
   const { i18n } = useTranslation();
+  const { isLoading } = useAuth();
 
   // Set document language for accessibility
   React.useEffect(() => {
     document.documentElement.lang = i18n.language;
   }, [i18n.language]);
+
+  // Show loading spinner while auth is initializing
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <LoadingSpinner size="xl" />
+          <p className="mt-4 text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="App min-h-screen bg-gray-50 flex flex-col">
@@ -90,6 +110,15 @@ function App() {
       {/* Footer */}
       <Footer />
     </div>
+  );
+}
+
+// Main App Component
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
