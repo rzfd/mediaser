@@ -1,10 +1,12 @@
 import React, { useState, useContext } from 'react';
 import { useTranslation } from 'react-i18next';
 import { AuthContext } from '../contexts/AuthContext';
-import { Youtube, Music, Upload, Play, Search, Grid, List } from 'lucide-react';
+import { Youtube, Music, Upload, Play, Search, Grid, List, Settings, Monitor } from 'lucide-react';
 import YouTubeUpload from '../components/media/YouTubeUpload';
 import TikTokUpload from '../components/media/TikTokUpload';
 import MediaGallery from '../components/media/MediaGallery';
+import StreamerMediaSettings from '../components/media/StreamerMediaSettings';
+import StreamerMediaDashboard from '../components/media/StreamerMediaDashboard';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
 
 const MediaPage = () => {
@@ -15,11 +17,20 @@ const MediaPage = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const tabs = [
+  const baseTabs = [
     { id: 'gallery', name: t('media.gallery'), icon: Play },
     { id: 'youtube', name: t('media.youtube'), icon: Youtube },
     { id: 'tiktok', name: t('media.tiktok'), icon: Music }
   ];
+
+  const streamerTabs = [
+    { id: 'dashboard', name: t('mediaShare.dashboard'), icon: Monitor },
+    { id: 'settings', name: t('mediaShare.settings'), icon: Settings }
+  ];
+
+  const tabs = user?.userType === 'streamer' 
+    ? [...baseTabs, ...streamerTabs] 
+    : baseTabs;
 
   if (!user) {
     return (
@@ -137,6 +148,12 @@ const MediaPage = () => {
           )}
           {activeTab === 'tiktok' && (
             <TikTokUpload setLoading={setLoading} />
+          )}
+          {activeTab === 'dashboard' && user?.userType === 'streamer' && (
+            <StreamerMediaDashboard />
+          )}
+          {activeTab === 'settings' && user?.userType === 'streamer' && (
+            <StreamerMediaSettings />
           )}
         </div>
       )}

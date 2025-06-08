@@ -4,6 +4,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { Heart, User, DollarSign, CreditCard, MessageCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import LoadingSpinner from '../components/ui/LoadingSpinner';
+import DonationMediaShare from '../components/media/DonationMediaShare';
 import { apiRequest, getValidToken } from '../utils/tokenUtils';
 import { processSnapPayment, fallbackToRedirect, waitForSnap } from '../utils/midtransUtils';
 
@@ -28,6 +29,7 @@ const DonatePage = () => {
   const [streamersLoading, setStreamersLoading] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+  const [sharedMedia, setSharedMedia] = useState(null);
 
   // API base URL
   const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080/api';
@@ -134,6 +136,13 @@ const DonatePage = () => {
     setSelectedStreamer(streamer);
     setFormData(prev => ({ ...prev, streamer_id: streamerId }));
     setError(null);
+  };
+
+  const handleMediaSubmit = async (mediaData) => {
+    console.log('Media shared:', mediaData);
+    setSharedMedia(mediaData);
+    // Here you would typically send the media data to your backend
+    // For now, we'll just store it in state
   };
 
   const validateForm = () => {
@@ -444,6 +453,25 @@ const DonatePage = () => {
                 rows="3"
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder={t('donation.enterMessage')}
+              />
+            </div>
+
+            {/* Media Share Option - Always show for testing */}
+            <div className="border border-blue-200 rounded-lg p-4 bg-blue-50">
+              <h4 className="text-sm font-medium text-blue-800 mb-2">🎬 Media Share Feature</h4>
+              <p className="text-xs text-blue-600 mb-3">Share your favorite YouTube or TikTok videos with streamers!</p>
+              <DonationMediaShare
+                donationAmount={formData.amount}
+                streamerSettings={{
+                  mediaShareEnabled: true,
+                  minDonationAmount: 5000,
+                  currency: 'IDR',
+                  allowYoutube: true,
+                  allowTiktok: true,
+                  welcomeMessage: 'Terima kasih atas donasi Anda! Silakan bagikan media favorit Anda.'
+                }}
+                onMediaSubmit={handleMediaSubmit}
+                className="mb-4"
               />
             </div>
 
