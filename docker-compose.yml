@@ -63,6 +63,27 @@ services:
     networks:
       - mediashar_network
 
+  media-share-db:
+    image: postgres:15-alpine
+    container_name: mediashar_media_share_db
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: media_share_db
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+    ports:
+      - "5437:5432"
+    volumes:
+      - media_share_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - mediashar_network
+
   # Microservices
   donation-service:
     build:
@@ -173,6 +194,44 @@ services:
       retries: 3
       start_period: 40s
 
+  media-share-service:
+    build:
+      context: .
+      dockerfile: Dockerfile.media-share-service
+    container_name: mediashar_media_share_service
+    ports:
+      - "9094:9094"
+    environment:
+      # Database Configuration
+      - MEDIA_SHARE_DB_HOST=media-share-db
+      - MEDIA_SHARE_DB_PORT=5432
+      - MEDIA_SHARE_DB_USERNAME=postgres
+      - MEDIA_SHARE_DB_PASSWORD=password
+      - MEDIA_SHARE_DB_NAME=media_share_db
+      
+      # Service Configuration
+      - GRPC_PORT=9094
+      - SERVICE_NAME=media-share-service
+      
+      # Logging Configuration
+      - LOG_LEVEL=info
+      - LOG_OUTPUT=both
+      - LOG_FILE=/app/logs/media-share-service.log
+    depends_on:
+      media-share-db:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - mediashar_network
+    volumes:
+      - app_logs:/app/logs
+    healthcheck:
+      test: ["CMD-SHELL", "netstat -an | grep :9094 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
   # API Gateway
   api-gateway:
     build:
@@ -185,6 +244,7 @@ services:
       - DONATION_SERVICE_URL=donation-service:9091
       - PAYMENT_SERVICE_URL=payment-service:9092
       - NOTIFICATION_SERVICE_URL=notification-service:9093
+      - MEDIA_SHARE_SERVICE_URL=media-share-service:9094
       - CURRENCY_SERVICE_URL=currency-service:8084
       - LANGUAGE_SERVICE_URL=language-service:8085
       - DB_HOST=gateway-db
@@ -203,13 +263,14 @@ services:
       - donation-service
       - payment-service
       - notification-service
+      - media-share-service
       - currency-service
       - language-service
     restart: unless-stopped
     networks:
       - mediashar_network
     volumes:
-      - ./cmd/api-gateway/configs/config.yaml:/app/config.yaml
+      - ./configs/api-gateway.yaml:/app/config.yaml
       - app_logs:/app/logs
 
   # Currency Service (NEW)
@@ -455,6 +516,7 @@ volumes:
   gateway_data:
   donation_data:
   payment_data:
+  media_share_data:
   pgadmin_data:
   currency_db_data:
   language_db_data:

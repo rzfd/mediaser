@@ -1,0 +1,59 @@
+# Multi-stage build for media-share-service (OPTIMIZED)
+FROM golang:1.23-alpine AS builder
+
+# Install build dependencies in one layer
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Set working directory
+WORKDIR /app
+
+# Copy go mod files FIRST (for better caching)
+COPY go.mod go.sum ./
+
+# Download dependencies (cached if go.mod/go.sum unchanged)
+RUN go mod download && go mod verify
+
+# Copy only necessary source files (not everything)
+COPY cmd/media-share-service/ ./cmd/media-share-service/
+COPY internal/ ./internal/
+COPY pkg/ ./pkg/
+COPY configs/ ./configs/
+
+# Build with optimizations
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build \
+    -ldflags="-w -s -extldflags '-static'" \
+    -a -installsuffix cgo \
+    -o media-share-service \
+    ./cmd/media-share-service
+
+# Final stage - minimal runtime image
+FROM alpine:3.18
+
+# Install ca-certificates for HTTPS requests and curl for health checks
+RUN apk --no-cache add ca-certificates curl netcat-openbsd
+
+# Create non-root user
+RUN addgroup -g 1001 mediaapp && \
+    adduser -D -s /bin/sh -u 1001 -G mediaapp mediaapp
+
+# Set working directory
+WORKDIR /app
+
+# Create logs directory
+RUN mkdir -p /app/logs && chown -R mediaapp:mediaapp /app
+
+# Copy binary from builder stage
+COPY --from=builder --chown=mediaapp:mediaapp /app/media-share-service /app/
+
+# Switch to non-root user
+USER mediaapp
+
+# Expose gRPC port
+EXPOSE 9094
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD nc -z localhost 9094 || exit 1
+
+# Run the service
+CMD ["./media-share-service"] 

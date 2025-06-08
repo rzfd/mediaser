@@ -1,0 +1,183 @@
+syntax = "proto3";
+
+package mediashar.media_share;
+
+option go_package = "github.com/rzfd/mediashar/pkg/pb";
+
+import "google/protobuf/timestamp.proto";
+
+// Media Share Service
+service MediaShareService {
+  // Settings management
+  rpc GetSettings(GetSettingsRequest) returns (GetSettingsResponse);
+  rpc UpdateSettings(UpdateSettingsRequest) returns (UpdateSettingsResponse);
+  
+  // Media share operations
+  rpc SubmitMediaShare(SubmitMediaShareRequest) returns (SubmitMediaShareResponse);
+  rpc GetMediaQueue(GetMediaQueueRequest) returns (GetMediaQueueResponse);
+  rpc GetMediaStats(GetMediaStatsRequest) returns (GetMediaStatsResponse);
+  
+  // Media management
+  rpc ApproveMedia(ApproveMediaRequest) returns (ApproveMediaResponse);
+  rpc RejectMedia(RejectMediaRequest) returns (RejectMediaResponse);
+  
+  // Real-time streaming
+  rpc StreamMediaQueue(StreamMediaQueueRequest) returns (stream MediaQueueUpdate);
+}
+
+// Enums
+enum MediaType {
+  MEDIA_TYPE_UNSPECIFIED = 0;
+  MEDIA_TYPE_YOUTUBE = 1;
+  MEDIA_TYPE_TIKTOK = 2;
+}
+
+enum MediaStatus {
+  MEDIA_STATUS_UNSPECIFIED = 0;
+  MEDIA_STATUS_PENDING = 1;
+  MEDIA_STATUS_APPROVED = 2;
+  MEDIA_STATUS_REJECTED = 3;
+  MEDIA_STATUS_PLAYED = 4;
+}
+
+// Settings Messages
+message GetSettingsRequest {
+  uint32 streamer_id = 1;
+}
+
+message GetSettingsResponse {
+  MediaShareSettings settings = 1;
+}
+
+message UpdateSettingsRequest {
+  uint32 streamer_id = 1;
+  MediaShareSettings settings = 2;
+}
+
+message UpdateSettingsResponse {
+  bool success = 1;
+  string message = 2;
+  MediaShareSettings settings = 3;
+}
+
+message MediaShareSettings {
+  uint32 id = 1;
+  uint32 streamer_id = 2;
+  bool enabled = 3;
+  double min_donation_amount = 4;
+  bool youtube_enabled = 5;
+  bool tiktok_enabled = 6;
+  bool auto_approve = 7;
+  uint32 max_duration_seconds = 8;
+  string welcome_message = 9;
+  google.protobuf.Timestamp created_at = 10;
+  google.protobuf.Timestamp updated_at = 11;
+}
+
+// Media Share Messages
+message SubmitMediaShareRequest {
+  uint32 donation_id = 1;
+  uint32 streamer_id = 2;
+  uint32 donator_id = 3;
+  string donator_name = 4;
+  MediaType media_type = 5;
+  string media_url = 6;
+  string custom_title = 7;
+  string custom_description = 8;
+  uint32 start_time = 9;
+  uint32 end_time = 10;
+}
+
+message SubmitMediaShareResponse {
+  bool success = 1;
+  string message = 2;
+  uint32 media_id = 3;
+  MediaStatus status = 4;
+  uint32 queue_position = 5;
+}
+
+// Queue Messages
+message GetMediaQueueRequest {
+  uint32 streamer_id = 1;
+  string status_filter = 2; // "pending", "approved", "rejected", "all"
+  uint32 page = 3;
+  uint32 page_size = 4;
+}
+
+message GetMediaQueueResponse {
+  repeated MediaShareItem items = 1;
+  uint64 total = 2;
+  uint32 page = 3;
+  uint32 page_size = 4;
+  uint32 total_pages = 5;
+}
+
+message MediaShareItem {
+  uint32 id = 1;
+  uint32 donation_id = 2;
+  uint32 streamer_id = 3;
+  uint32 donator_id = 4;
+  string donator_name = 5;
+  MediaType media_type = 6;
+  string media_url = 7;
+  string custom_title = 8;
+  string custom_description = 9;
+  string thumbnail_url = 10;
+  uint32 duration_seconds = 11;
+  uint32 start_time = 12;
+  uint32 end_time = 13;
+  MediaStatus status = 14;
+  double donation_amount = 15;
+  google.protobuf.Timestamp submitted_at = 16;
+  google.protobuf.Timestamp processed_at = 17;
+}
+
+// Stats Messages
+message GetMediaStatsRequest {
+  uint32 streamer_id = 1;
+}
+
+message GetMediaStatsResponse {
+  uint32 total_submissions = 1;
+  uint32 pending_count = 2;
+  uint32 approved_count = 3;
+  uint32 rejected_count = 4;
+  uint32 played_count = 5;
+  double total_donation_amount = 6;
+  uint32 youtube_count = 7;
+  uint32 tiktok_count = 8;
+}
+
+// Management Messages
+message ApproveMediaRequest {
+  uint32 media_id = 1;
+  uint32 streamer_id = 2;
+}
+
+message ApproveMediaResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+message RejectMediaRequest {
+  uint32 media_id = 1;
+  uint32 streamer_id = 2;
+  string reason = 3;
+}
+
+message RejectMediaResponse {
+  bool success = 1;
+  string message = 2;
+}
+
+// Streaming Messages
+message StreamMediaQueueRequest {
+  uint32 streamer_id = 1;
+}
+
+message MediaQueueUpdate {
+  string event_type = 1; // "new_submission", "approved", "rejected", "played"
+  MediaShareItem media_item = 2;
+  uint32 queue_position = 3;
+  google.protobuf.Timestamp timestamp = 4;
+} 

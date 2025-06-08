@@ -114,17 +114,19 @@ func main() {
 		config:             config,
 	}
 
-	// Initialize local services (Auth, User management, Currency, Language)
+	// Initialize local services (Auth, User management, Currency, Language, Media Share)
 	userRepo := repositoryImpl.NewUserRepository(db)
 	platformRepo := repositoryImpl.NewPlatformRepository(db)
 	currencyRepo := repositoryImpl.NewCurrencyRepository(db)
 	languageRepo := repositoryImpl.NewLanguageRepository(db)
+	mediaShareRepo := repositoryImpl.NewMediaShareRepository(db)
 
 	userService := serviceImpl.NewUserService(userRepo)
 	authService := serviceImpl.NewAuthService(config.Auth.JWTSecret, config.Auth.TokenExpiry/3600)
 	platformService := serviceImpl.NewPlatformService()
 	currencyService := service.NewCurrencyService(currencyRepo)
 	languageService := service.NewLanguageService(languageRepo)
+	mediaShareService := serviceImpl.NewMediaShareService(mediaShareRepo)
 
 	// Create mock donation service for handlers that need it
 	mockDonationService := &MockDonationService{gateway: gateway}
@@ -137,6 +139,7 @@ func main() {
 	qrisHandler := handler.NewQRISHandler(qrisService, mockDonationService)
 	currencyHandler := handler.NewCurrencyHandler(currencyService)
 	languageHandler := handler.NewLanguageHandler(languageService)
+	mediaShareHandler := handler.NewMediaShareHandler(mediaShareService)
 
 	// Create gateway-specific handlers
 	donationHandler := gateway.NewDonationHandler()
@@ -189,7 +192,7 @@ func main() {
 	})
 
 	// Setup all routes
-	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, currencyHandler, languageHandler, config.Auth.JWTSecret)
+	routes.SetupRoutes(e, userHandler, donationHandler, webhookHandler, authHandler, qrisHandler, platformHandler, midtransHandler, currencyHandler, languageHandler, mediaShareHandler, config.Auth.JWTSecret)
 
 	// Additional health check for gateway services
 	e.GET("/services/health", gateway.ServicesHealthCheck)
@@ -591,12 +594,14 @@ func getEnv(key, defaultValue string) string {
 }
 
 func migrateGatewayTables(db *gorm.DB) error {
-	// Gateway only needs user management and platform tables
+	// Gateway needs user management, platform tables, and media share tables
 	return db.AutoMigrate(
 		&models.User{},
 		&models.StreamingPlatform{},
 		&models.StreamingContent{},
 		&models.ContentDonation{},
+		&models.MediaShareSettings{},
+		&models.MediaShare{},
 	)
 }
 
