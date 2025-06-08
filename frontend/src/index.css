@@ -65,7 +65,24 @@ code {
 
 /* Input styles */
 .input {
-  @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200;
+  @apply w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-colors duration-200 text-gray-900;
+}
+
+/* Fix input text color */
+input[type="text"], 
+input[type="url"], 
+input[type="email"], 
+input[type="password"], 
+textarea {
+  color: #111827 !important; /* gray-900 */
+}
+
+input[type="text"]::placeholder,
+input[type="url"]::placeholder,
+input[type="email"]::placeholder,
+input[type="password"]::placeholder,
+textarea::placeholder {
+  color: #9ca3af !important; /* gray-400 for placeholder */
 }
 
 .input-error {
@@ -125,6 +142,33 @@ code {
     background-color: rgb(17 24 39 / var(--tw-bg-opacity));
     color: rgb(243 244 246);
   }
+}
+
+/* Line clamp utilities */
+.line-clamp-1 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 1;
+}
+
+.line-clamp-2 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.line-clamp-3 {
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3;
+}
+
+/* Aspect ratio utilities */
+.aspect-\[3\/4\] {
+  aspect-ratio: 3 / 4;
 }
 
 /* Print styles */

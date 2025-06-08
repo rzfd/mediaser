@@ -1,7 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Heart, Globe, DollarSign, Users, Zap, Shield } from 'lucide-react';
+import { Heart, Globe, DollarSign, Users, Zap, Shield, Youtube, Music } from 'lucide-react';
 
 const HomePage = () => {
   const { t } = useTranslation();
@@ -145,6 +145,60 @@ const HomePage = () => {
                 className="btn-primary"
               >
                 Try Language Translator
+              </Link>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Media Section */}
+      <section className="py-16">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-12">
+            <h2 className="text-3xl font-bold text-gray-900 mb-4">
+              Share Your Content
+            </h2>
+            <p className="text-gray-600 max-w-2xl mx-auto">
+              Upload and showcase your YouTube and TikTok videos to connect with your audience
+            </p>
+          </div>
+          
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+            {/* YouTube Integration */}
+            <div className="card p-8">
+              <div className="flex items-center mb-4">
+                <Youtube className="w-8 h-8 text-red-600 mr-3" />
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  YouTube Integration
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Share your YouTube videos and let supporters discover your content
+              </p>
+              <Link
+                to="/media"
+                className="btn-primary"
+              >
+                Manage YouTube Videos
+              </Link>
+            </div>
+
+            {/* TikTok Integration */}
+            <div className="card p-8">
+              <div className="flex items-center mb-4">
+                <Music className="w-8 h-8 text-pink-600 mr-3" />
+                <h3 className="text-2xl font-semibold text-gray-900">
+                  TikTok Integration
+                </h3>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Showcase your TikTok content and engage with your community
+              </p>
+              <Link
+                to="/media"
+                className="btn-primary"
+              >
+                Manage TikTok Videos
               </Link>
             </div>
           </div>

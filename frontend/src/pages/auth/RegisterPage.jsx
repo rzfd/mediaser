@@ -213,12 +213,12 @@ const RegisterPage = () => {
           </form>
 
           <div className="mt-6 text-center">
-            <p className="text-gray-600">
+          <p className="text-gray-600">
               {t('auth.alreadyHaveAccount')}{' '}
               <Link to="/login" className="text-blue-600 hover:text-blue-800 font-medium">
                 {t('auth.login')}
               </Link>
-            </p>
+          </p>
           </div>
         </div>
       </div>

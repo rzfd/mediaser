@@ -17,6 +17,7 @@ import LoadingSpinner from './components/ui/LoadingSpinner';
 import HomePage from './pages/HomePage';
 import DonatePage from './pages/DonatePage';
 import StreamersPage from './pages/StreamersPage';
+import MediaPage from './pages/MediaPage';
 import ProfilePage from './pages/ProfilePage';
 import LoginPage from './pages/auth/LoginPage';
 import RegisterPage from './pages/auth/RegisterPage';
@@ -85,6 +86,7 @@ function AppContent() {
           <Route path="/donate" element={<DonatePage />} />
           <Route path="/donate/:streamerId" element={<DonatePage />} />
           <Route path="/streamers" element={<StreamersPage />} />
+          <Route path="/media" element={<MediaPage />} />
           <Route path="/profile" element={<ProfilePage />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />

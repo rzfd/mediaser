@@ -4,6 +4,8 @@ import { getValidToken, cleanupInvalidToken, isAuthenticated as checkAuth } from
 
 const AuthContext = createContext();
 
+export { AuthContext };
+
 export const useAuth = () => {
   const context = useContext(AuthContext);
   if (!context) {

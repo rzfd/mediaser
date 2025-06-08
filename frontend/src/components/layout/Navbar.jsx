@@ -21,6 +21,7 @@ const Navbar = () => {
     { path: '/', label: t('navigation.home') },
     { path: '/donate', label: t('navigation.donate') },
     { path: '/streamers', label: t('navigation.streamers') },
+    { path: '/media', label: t('navigation.media') },
   ];
 
   const isActiveRoute = (path) => {
