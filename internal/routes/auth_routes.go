@@ -12,6 +12,7 @@ func SetupAuthRoutes(api *echo.Group, authHandler *handler.AuthHandler, jwtSecre
 	auth := api.Group("/auth")
 	auth.POST("/register", authHandler.Register)
 	auth.POST("/login", authHandler.Login)
+	auth.POST("/google", authHandler.GoogleLogin)
 	auth.POST("/refresh", authHandler.RefreshToken)
 
 	// Protected auth routes (authentication required)

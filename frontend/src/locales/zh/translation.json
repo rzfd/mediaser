@@ -124,6 +124,9 @@
     "passwordPlaceholder": "请输入您的密码",
     "usernamePlaceholder": "请输入您的用户名",
     "confirmPasswordPlaceholder": "请确认您的密码",
+    "loginWithGoogle": "使用 Google 登录",
+    "orLoginWith": "或者使用邮箱继续",
+    "orRegisterWith": "或者使用邮箱注册",
     "errors": {
       "emailRequired": "邮箱是必填项",
       "emailInvalid": "请输入有效的邮箱地址",
@@ -133,7 +136,8 @@
       "usernameMin": "用户名至少需要3个字符",
       "passwordMatch": "密码不匹配",
       "loginFailed": "登录失败，请检查您的凭据",
-      "registerFailed": "注册失败，请重试"
+      "registerFailed": "注册失败，请重试",
+      "googleLoginFailed": "Google 登录失败，请重试"
     }
   },
   "profile": {

@@ -6,6 +6,20 @@ FROM node:18-alpine AS build
 
 WORKDIR /app
 
+# Build arguments for React environment variables
+ARG REACT_APP_GOOGLE_CLIENT_ID
+ARG REACT_APP_API_URL=http://localhost:8080/api
+ARG REACT_APP_BACKEND_URL=http://localhost:8080
+ARG REACT_APP_CURRENCY_API=http://localhost:8094
+ARG REACT_APP_LANGUAGE_API=http://localhost:8095
+
+# Set environment variables for React build
+ENV REACT_APP_GOOGLE_CLIENT_ID=$REACT_APP_GOOGLE_CLIENT_ID
+ENV REACT_APP_API_URL=$REACT_APP_API_URL
+ENV REACT_APP_BACKEND_URL=$REACT_APP_BACKEND_URL
+ENV REACT_APP_CURRENCY_API=$REACT_APP_CURRENCY_API
+ENV REACT_APP_LANGUAGE_API=$REACT_APP_LANGUAGE_API
+
 # Copy package files
 COPY package*.json ./
 
@@ -15,7 +29,7 @@ RUN npm install --only=production
 # Copy source code
 COPY . .
 
-# Build the React app
+# Build the React app with environment variables
 RUN npm run build
 
 # Production stage

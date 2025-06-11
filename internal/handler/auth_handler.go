@@ -1,12 +1,15 @@
 package handler
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rzfd/mediashar/internal/models"
 	"github.com/rzfd/mediashar/internal/service"
 	"github.com/rzfd/mediashar/pkg/utils"
+	"google.golang.org/api/oauth2/v2"
+	"google.golang.org/api/option"
 )
 
 type AuthHandler struct {
@@ -218,4 +221,85 @@ func (h *AuthHandler) Logout(c echo.Context) error {
 	// for consistency and future token blacklisting implementation.
 	
 	return c.JSON(http.StatusOK, utils.SuccessResponse("Logged out successfully", nil))
+}
+
+// GoogleLogin handles Google OAuth login
+func (h *AuthHandler) GoogleLogin(c echo.Context) error {
+	var req struct {
+		Credential string `json:"credential" validate:"required"`
+	}
+
+	if err := c.Bind(&req); err != nil {
+		return c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid request", err))
+	}
+
+	// Verify Google JWT token
+	userInfo, err := h.verifyGoogleToken(req.Credential)
+	if err != nil {
+		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Invalid Google token", err))
+	}
+
+	// Check if user exists
+	user, err := h.userService.GetByEmail(userInfo.Email)
+	if err != nil {
+		// User doesn't exist, create new user
+		user = &models.User{
+			Username:   userInfo.Email, // Use email as username initially
+			Email:      userInfo.Email,
+			FullName:   userInfo.Name,
+			IsStreamer: false, // Default to donator
+			Password:   "", // No password for OAuth users
+		}
+
+		if err := h.userService.Create(user); err != nil {
+			return c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to create user", err))
+		}
+	}
+
+	// Generate JWT token
+	token, err := h.authService.GenerateToken(user)
+	if err != nil {
+		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to generate token", err))
+	}
+
+	// Don't return password
+	user.Password = ""
+
+	return c.JSON(http.StatusOK, utils.SuccessResponse("Google login successful", map[string]interface{}{
+		"user":  user,
+		"token": token,
+	}))
+}
+
+// GoogleUserInfo represents user info from Google
+type GoogleUserInfo struct {
+	Email string
+	Name  string
+	ID    string
+}
+
+// verifyGoogleToken verifies the Google JWT token and returns user info
+func (h *AuthHandler) verifyGoogleToken(credential string) (*GoogleUserInfo, error) {
+	ctx := context.Background()
+	
+	// Create OAuth2 service
+	oauth2Service, err := oauth2.NewService(ctx, option.WithoutAuthentication())
+	if err != nil {
+		return nil, err
+	}
+
+	// Verify the token
+	tokenInfo, err := oauth2Service.Tokeninfo().IdToken(credential).Do()
+	if err != nil {
+		return nil, err
+	}
+
+	// Get user info from tokeninfo
+	userInfo := &GoogleUserInfo{
+		Email: tokenInfo.Email,
+		Name:  tokenInfo.Email, // Use email as name if full name not available
+		ID:    tokenInfo.UserId,
+	}
+
+	return userInfo, nil
 } 

@@ -336,6 +336,12 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+        - REACT_APP_API_URL=http://localhost:8080/api
+        - REACT_APP_BACKEND_URL=http://localhost:8080
+        - REACT_APP_CURRENCY_API=http://localhost:8094
+        - REACT_APP_LANGUAGE_API=http://localhost:8095
     container_name: mediashar_frontend
     ports:
       - "3000:80"
@@ -344,6 +350,7 @@ services:
       - REACT_APP_BACKEND_URL=http://localhost:8080
       - REACT_APP_CURRENCY_API=http://localhost:8094
       - REACT_APP_LANGUAGE_API=http://localhost:8095
+      - REACT_APP_GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
     depends_on:
       - api-gateway
       - currency-service

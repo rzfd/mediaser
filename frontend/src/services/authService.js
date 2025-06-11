@@ -85,6 +85,50 @@ class AuthService {
   isAuthenticated() {
     return !!this.getToken();
   }
+
+  async loginWithGoogle(credential) {
+    try {
+      const response = await fetch(`${API_BASE_URL}/auth/google`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ credential }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || 'Google login failed');
+      }
+
+      console.log('Google login response data:', data);
+
+      // Store token in localStorage - backend returns { success, message, data: { user, token } }
+      const token = data.data?.token || data.token;
+      const user = data.data?.user || data.user;
+      
+      console.log('Token from Google response:', token ? token.substring(0, 20) + '...' : 'No token found');
+      console.log('User from Google response:', user);
+
+      if (token) {
+        localStorage.setItem('authToken', token);
+        console.log('Google token stored in localStorage');
+      } else {
+        console.error('No token found in Google login response');
+      }
+
+      if (user) {
+        localStorage.setItem('user', JSON.stringify(user));
+        console.log('Google user stored in localStorage');
+      }
+
+      return { ...data, token, user };
+    } catch (error) {
+      console.error('Google login error:', error);
+      throw error;
+    }
+  }
 }
 
 export default new AuthService(); 

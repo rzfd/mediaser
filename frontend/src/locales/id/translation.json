@@ -124,6 +124,9 @@
     "passwordPlaceholder": "Masukkan kata sandi Anda",
     "usernamePlaceholder": "Masukkan nama pengguna Anda",
     "confirmPasswordPlaceholder": "Konfirmasi kata sandi Anda",
+    "loginWithGoogle": "Masuk dengan Google",
+    "orLoginWith": "atau lanjutkan dengan email",
+    "orRegisterWith": "atau daftar dengan email",
     "errors": {
       "emailRequired": "Email wajib diisi",
       "emailInvalid": "Silakan masukkan alamat email yang valid",
@@ -133,7 +136,8 @@
       "usernameMin": "Nama pengguna minimal 3 karakter",
       "passwordMatch": "Kata sandi tidak cocok",
       "loginFailed": "Login gagal. Periksa kredensial Anda.",
-      "registerFailed": "Registrasi gagal. Silakan coba lagi."
+      "registerFailed": "Registrasi gagal. Silakan coba lagi.",
+      "googleLoginFailed": "Login Google gagal. Silakan coba lagi."
     }
   },
   "profile": {

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
+import GoogleLoginButton from '../../components/auth/GoogleLoginButton';
 
 const LoginPage = () => {
   const { t } = useTranslation();
@@ -71,6 +72,20 @@ const LoginPage = () => {
     }
   };
 
+  const handleGoogleSuccess = () => {
+    // Show success message
+    alert(t('auth.loginSuccess'));
+    
+    // Redirect to home page
+    navigate('/');
+  };
+
+  const handleGoogleError = (error) => {
+    setErrors({
+      general: error.message || t('auth.errors.googleLoginFailed')
+    });
+  };
+
   return (
     <div className="max-w-md mx-auto">
       <div className="text-center py-8">
@@ -82,6 +97,24 @@ const LoginPage = () => {
         </p>
         
         <div className="card p-8">
+          {/* Google Login Button */}
+          <div className="mb-6">
+            <GoogleLoginButton 
+              onSuccess={handleGoogleSuccess}
+              onError={handleGoogleError}
+            />
+          </div>
+
+          {/* Divider */}
+          <div className="relative mb-6">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-gray-300"></div>
+            </div>
+            <div className="relative flex justify-center text-sm">
+              <span className="px-2 bg-white text-gray-500">{t('auth.orLoginWith')}</span>
+            </div>
+          </div>
+
           <form onSubmit={handleSubmit} className="space-y-4">
             {errors.general && (
               <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg">

@@ -124,6 +124,9 @@
     "passwordPlaceholder": "Enter your password",
     "usernamePlaceholder": "Enter your username",
     "confirmPasswordPlaceholder": "Confirm your password",
+    "loginWithGoogle": "Sign in with Google",
+    "orLoginWith": "or continue with email",
+    "orRegisterWith": "or register with email",
     "errors": {
       "emailRequired": "Email is required",
       "emailInvalid": "Please enter a valid email address",
@@ -133,7 +136,8 @@
       "usernameMin": "Username must be at least 3 characters",
       "passwordMatch": "Passwords do not match",
       "loginFailed": "Login failed. Please check your credentials.",
-      "registerFailed": "Registration failed. Please try again."
+      "registerFailed": "Registration failed. Please try again.",
+      "googleLoginFailed": "Google login failed. Please try again."
     }
   },
   "profile": {

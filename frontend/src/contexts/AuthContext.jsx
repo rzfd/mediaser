@@ -73,13 +73,27 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
   };
 
+  const loginWithGoogle = async (credential) => {
+    try {
+      const response = await authService.loginWithGoogle(credential);
+      console.log('Google login response:', response);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      console.log('Auth state updated with Google:', { user: response.user, isAuthenticated: true });
+      return response;
+    } catch (error) {
+      throw error;
+    }
+  };
+
   const value = {
     user,
     isAuthenticated,
     isLoading,
     login,
     register,
-    logout
+    logout,
+    loginWithGoogle
   };
 
   return (
