@@ -8,6 +8,7 @@ import (
 	"github.com/rzfd/mediashar/internal/repository"
 	"github.com/rzfd/mediashar/internal/service"
 	"golang.org/x/crypto/bcrypt"
+	"gorm.io/gorm"
 )
 
 type userService struct {
@@ -98,4 +99,9 @@ func (s *userService) Authenticate(email, password string) (*models.User, error)
 	}
 
 	return user, nil
+}
+
+// GetDB returns the database instance for metrics queries
+func (s *userService) GetDB() *gorm.DB {
+	return s.userRepo.GetDB()
 } 

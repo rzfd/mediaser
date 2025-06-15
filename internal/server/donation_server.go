@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net"
+	"net/http"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -16,6 +17,7 @@ import (
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	"github.com/rzfd/mediashar/internal/utils"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -52,13 +54,16 @@ func NewDonationServer(config *configs.Config) (*DonationServer, error) {
 	}, nil
 }
 
-func (s *DonationServer) Start() error {
-	lis, err := net.Listen("tcp", ":"+s.port)
+func (ds *DonationServer) Start() error {
+	// Start metrics HTTP server in background
+	go ds.startMetricsServer()
+	
+	lis, err := net.Listen("tcp", ":"+ds.port)
 	if err != nil {
-		return fmt.Errorf("failed to listen on port %s: %w", s.port, err)
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	return s.server.Serve(lis)
+	return ds.server.Serve(lis)
 }
 
 func (s *DonationServer) Stop() {
@@ -67,6 +72,19 @@ func (s *DonationServer) Stop() {
 
 func (s *DonationServer) GetPort() string {
 	return s.port
+}
+
+func (ds *DonationServer) startMetricsServer() {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", metrics.MetricsHandler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"healthy","service":"donation-service"}`))
+	})
+	
+	metricsPort := utils.GetEnv("METRICS_PORT", "8091")
+	http.ListenAndServe(":"+metricsPort, mux)
 }
 
 func initDonationDatabase(config *configs.Config) (*gorm.DB, error) {

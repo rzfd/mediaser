@@ -3,7 +3,6 @@ package server
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -69,8 +68,8 @@ func NewAPIGateway(config *configs.Config) (*APIGateway, error) {
 	gateway.echo = e
 	gateway.config = config
 
-	// Start user metrics updater
-	go startUserMetricsUpdater(db)
+	// Initialize advanced user metrics collector
+	go initAdvancedUserMetricsCollector(db)
 
 	return gateway, nil
 }
@@ -238,31 +237,25 @@ func setupEchoServer(handlers *Handlers, config *configs.Config) *echo.Echo {
 	return e
 }
 
-func startUserMetricsUpdater(db *gorm.DB) {
+func initAdvancedUserMetricsCollector(db *gorm.DB) {
 	appLogger := logger.GetLogger()
-	appLogger.Info("Starting user metrics updater...")
-	ticker := time.NewTicker(30 * time.Second)
-	defer ticker.Stop()
+	appLogger.Info("Initializing advanced user metrics collector...")
 	
-	updateUserMetrics := func() {
-		var totalUsers int64
-		if err := db.Table("users").Where("deleted_at IS NULL").Count(&totalUsers).Error; err == nil {
-			metrics.GetMetrics().TotalUsersRegistered.Set(float64(totalUsers))
-			appLogger.Info("User metrics updated", "total_users", totalUsers)
-		} else {
-			appLogger.Error(err, "Failed to update user metrics")
-		}
+	// Convert GORM DB to sql.DB for metrics collector
+	sqlDB, err := db.DB()
+	if err != nil {
+		appLogger.Error(err, "Failed to get sql.DB from GORM")
+		return
 	}
 	
-	// Update immediately
-	updateUserMetrics()
-	
-	// Update every 30 seconds
-	for {
-		select {
-		case <-ticker.C:
-			updateUserMetrics()
-		}
+	// Initialize and start advanced user metrics collector
+	metricsInstance := metrics.GetMetrics()
+	if metricsInstance != nil {
+		userCollector := metrics.NewUserMetricsCollector(sqlDB, metricsInstance)
+		userCollector.Start()
+		appLogger.Info("Advanced user metrics collector started successfully")
+	} else {
+		appLogger.Error(nil, "Metrics instance not available")
 	}
 }
 

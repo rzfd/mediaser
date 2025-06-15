@@ -3,6 +3,7 @@ package server
 import (
 	"fmt"
 	"net"
+	"net/http"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
@@ -16,6 +17,7 @@ import (
 	"github.com/rzfd/mediashar/internal/service/serviceImpl"
 	"github.com/rzfd/mediashar/internal/utils"
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -52,21 +54,37 @@ func NewPaymentServer(config *configs.Config) (*PaymentServer, error) {
 	}, nil
 }
 
-func (s *PaymentServer) Start() error {
-	lis, err := net.Listen("tcp", ":"+s.port)
+func (ps *PaymentServer) Start() error {
+	// Start metrics HTTP server in background
+	go ps.startMetricsServer()
+	
+	lis, err := net.Listen("tcp", ":"+ps.port)
 	if err != nil {
-		return fmt.Errorf("failed to listen on port %s: %w", s.port, err)
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	return s.server.Serve(lis)
+	return ps.server.Serve(lis)
 }
 
-func (s *PaymentServer) Stop() {
-	s.server.GracefulStop()
+func (ps *PaymentServer) Stop() {
+	ps.server.GracefulStop()
 }
 
-func (s *PaymentServer) GetPort() string {
-	return s.port
+func (ps *PaymentServer) GetPort() string {
+	return ps.port
+}
+
+func (ps *PaymentServer) startMetricsServer() {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", metrics.MetricsHandler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"healthy","service":"payment-service"}`))
+	})
+	
+	metricsPort := utils.GetEnv("METRICS_PORT", "8092")
+	http.ListenAndServe(":"+metricsPort, mux)
 }
 
 func initPaymentDatabase(config *configs.Config) (*gorm.DB, error) {

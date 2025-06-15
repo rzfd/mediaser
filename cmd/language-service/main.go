@@ -36,7 +36,7 @@ func main() {
 	go func() {
 		if err := languageServer.StartGRPC(); err != nil {
 			appLogger.Fatal(err, "Failed to start gRPC server")
-		}
+	}
 	}()
 
 	// Start HTTP server

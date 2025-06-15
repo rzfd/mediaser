@@ -38,11 +38,22 @@ type Metrics struct {
 	ActiveUsers24h         prometheus.Gauge
 	ActiveUsers7d          prometheus.Gauge
 	ActiveUsers30d         prometheus.Gauge
+	ActiveUsersToday       prometheus.Gauge
 	UserLoginTotal         *prometheus.CounterVec
 	UserLogoutTotal        *prometheus.CounterVec
 	UserActivityTotal      *prometheus.CounterVec
 	ActiveSessionsTotal    prometheus.Gauge
 	SessionDurationSeconds *prometheus.HistogramVec
+	
+	// Login rate metrics
+	LoginAttemptsLastHour     prometheus.Gauge
+	LoginSuccessLastHour      prometheus.Gauge
+	LoginFailedLastHour       prometheus.Gauge
+	LoginSuccessRateLastHour  prometheus.Gauge
+	LoginAttemptsLast24h      prometheus.Gauge
+	LoginSuccessLast24h       prometheus.Gauge
+	LoginFailedLast24h        prometheus.Gauge
+	LoginSuccessRateLast24h   prometheus.Gauge
 	
 	// System metrics
 	GoRoutines            prometheus.Gauge
@@ -186,6 +197,12 @@ func NewMetrics(serviceName string) *Metrics {
 				Help: "Number of active users in the last 30 days",
 			},
 		),
+		ActiveUsersToday: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_users_today",
+				Help: "Number of active users today",
+			},
+		),
 		UserLoginTotal: prometheus.NewCounterVec(
 			prometheus.CounterOpts{
 				Name: "user_login_total",
@@ -220,6 +237,56 @@ func NewMetrics(serviceName string) *Metrics {
 				Buckets: []float64{60, 300, 900, 1800, 3600, 7200, 14400}, // 1min to 4hours
 			},
 			[]string{"service"},
+		),
+		
+		// Login rate metrics
+		LoginAttemptsLastHour: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_attempts_last_hour",
+				Help: "Number of login attempts in the last hour",
+			},
+		),
+		LoginSuccessLastHour: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_success_last_hour",
+				Help: "Number of successful logins in the last hour",
+			},
+		),
+		LoginFailedLastHour: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_failed_last_hour",
+				Help: "Number of failed logins in the last hour",
+			},
+		),
+		LoginSuccessRateLastHour: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_success_rate_last_hour",
+				Help: "Success rate of logins in the last hour",
+			},
+		),
+		LoginAttemptsLast24h: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_attempts_last_24h",
+				Help: "Number of login attempts in the last 24 hours",
+			},
+		),
+		LoginSuccessLast24h: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_success_last_24h",
+				Help: "Number of successful logins in the last 24 hours",
+			},
+		),
+		LoginFailedLast24h: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_failed_last_24h",
+				Help: "Number of failed logins in the last 24 hours",
+			},
+		),
+		LoginSuccessRateLast24h: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "login_success_rate_last_24h",
+				Help: "Success rate of logins in the last 24 hours",
+			},
 		),
 		
 		// System metrics
@@ -263,11 +330,20 @@ func NewMetrics(serviceName string) *Metrics {
 		m.ActiveUsers24h,
 		m.ActiveUsers7d,
 		m.ActiveUsers30d,
+		m.ActiveUsersToday,
 		m.UserLoginTotal,
 		m.UserLogoutTotal,
 		m.UserActivityTotal,
 		m.ActiveSessionsTotal,
 		m.SessionDurationSeconds,
+		m.LoginAttemptsLastHour,
+		m.LoginSuccessLastHour,
+		m.LoginFailedLastHour,
+		m.LoginSuccessRateLastHour,
+		m.LoginAttemptsLast24h,
+		m.LoginSuccessLast24h,
+		m.LoginFailedLast24h,
+		m.LoginSuccessRateLast24h,
 		m.GoRoutines,
 		m.MemoryUsage,
 		m.CPUUsage,

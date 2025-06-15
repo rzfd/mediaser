@@ -63,4 +63,9 @@ func (r *userRepository) GetStreamers(offset, limit int) ([]*models.User, error)
 	var users []*models.User
 	err := r.db.Where("is_streamer = ?", true).Offset(offset).Limit(limit).Find(&users).Error
 	return users, err
+}
+
+// GetDB returns the database instance for metrics queries
+func (r *userRepository) GetDB() *gorm.DB {
+	return r.db
 } 

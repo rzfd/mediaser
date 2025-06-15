@@ -22,21 +22,21 @@ scrape_configs:
   # MediaShar Microservices
   - job_name: 'donation-service'
     static_configs:
-      - targets: ['donation-service:9091']
+      - targets: ['donation-service:8091']
     metrics_path: /metrics
     scrape_interval: 10s
     scrape_timeout: 5s
 
   - job_name: 'payment-service'
     static_configs:
-      - targets: ['payment-service:9092']
+      - targets: ['payment-service:8092']
     metrics_path: /metrics
     scrape_interval: 10s
     scrape_timeout: 5s
 
   - job_name: 'notification-service'
     static_configs:
-      - targets: ['notification-service:9093']
+      - targets: ['notification-service:8093']
     metrics_path: /metrics
     scrape_interval: 10s
     scrape_timeout: 5s

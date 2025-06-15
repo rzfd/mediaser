@@ -3,12 +3,14 @@ package server
 import (
 	"fmt"
 	"net"
+	"net/http"
 
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/reflection"
 
 	grpcServer "github.com/rzfd/mediashar/internal/grpc"
 	"github.com/rzfd/mediashar/internal/utils"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/pb"
 )
 
@@ -39,13 +41,29 @@ func NewNotificationServer() (*NotificationServer, error) {
 	}, nil
 }
 
-func (s *NotificationServer) Start() error {
-	lis, err := net.Listen("tcp", ":"+s.port)
+func (ns *NotificationServer) Start() error {
+	// Start metrics HTTP server in background
+	go ns.startMetricsServer()
+	
+	lis, err := net.Listen("tcp", ":"+ns.port)
 	if err != nil {
-		return fmt.Errorf("failed to listen on port %s: %w", s.port, err)
+		return fmt.Errorf("failed to listen: %w", err)
 	}
 
-	return s.server.Serve(lis)
+	return ns.server.Serve(lis)
+}
+
+func (ns *NotificationServer) startMetricsServer() {
+	mux := http.NewServeMux()
+	mux.Handle("/metrics", metrics.MetricsHandler())
+	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write([]byte(`{"status":"healthy","service":"notification-service"}`))
+	})
+	
+	metricsPort := utils.GetEnv("METRICS_PORT", "8093")
+	http.ListenAndServe(":"+metricsPort, mux)
 }
 
 func (s *NotificationServer) Stop() {

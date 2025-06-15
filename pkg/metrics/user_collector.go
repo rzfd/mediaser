@@ -65,10 +65,14 @@ func (c *UserMetricsCollector) collectMetrics() {
 	activeUsers24h := c.getActiveUsers(ctx, 24)
 	activeUsers7d := c.getActiveUsers(ctx, 24*7)
 	activeUsers30d := c.getActiveUsers(ctx, 24*30)
+	
+	// Collect today's active users (midnight to now)
+	activeTodayUsers := c.getActiveTodayUsers(ctx)
 
 	c.metrics.ActiveUsers24h.Set(float64(activeUsers24h))
 	c.metrics.ActiveUsers7d.Set(float64(activeUsers7d))
 	c.metrics.ActiveUsers30d.Set(float64(activeUsers30d))
+	c.metrics.ActiveUsersToday.Set(float64(activeTodayUsers))
 
 	// Collect current active/online users
 	currentActiveUsers := c.getCurrentActiveUsers(ctx)
@@ -81,8 +85,11 @@ func (c *UserMetricsCollector) collectMetrics() {
 	activeSessions := c.getActiveSessions(ctx)
 	c.metrics.ActiveSessionsTotal.Set(float64(activeSessions))
 
-	log.Printf("User metrics updated: total=%d, active_24h=%d, active_7d=%d, active_30d=%d, online=%d",
-		totalUsers, activeUsers24h, activeUsers7d, activeUsers30d, onlineUsers)
+	// Collect login rate metrics
+	c.collectLoginRateMetrics(ctx)
+
+	log.Printf("User metrics updated: total=%d, active_24h=%d, active_7d=%d, active_30d=%d, active_today=%d, online=%d",
+		totalUsers, activeUsers24h, activeUsers7d, activeUsers30d, activeTodayUsers, onlineUsers)
 }
 
 // getTotalUsers gets total number of registered users
@@ -165,6 +172,118 @@ func (c *UserMetricsCollector) getActiveSessions(ctx context.Context) int {
 	err := c.db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
 		log.Printf("Error getting active sessions: %v", err)
+		return 0
+	}
+	
+	return count
+}
+
+// getActiveTodayUsers gets active users today (midnight to now)
+func (c *UserMetricsCollector) getActiveTodayUsers(ctx context.Context) int {
+	var count int
+	query := `
+		SELECT COUNT(DISTINCT user_id) 
+		FROM user_activities 
+		WHERE DATE(created_at) = CURRENT_DATE
+	`
+	
+	err := c.db.QueryRowContext(ctx, query).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting today's active users: %v", err)
+		return 0
+	}
+	
+	return count
+}
+
+// collectLoginRateMetrics collects login success/failure rates
+func (c *UserMetricsCollector) collectLoginRateMetrics(ctx context.Context) {
+	// Get login attempts in the last hour
+	loginAttemptsLastHour := c.getLoginAttempts(ctx, 1)
+	successfulLoginsLastHour := c.getSuccessfulLogins(ctx, 1)
+	failedLoginsLastHour := c.getFailedLogins(ctx, 1)
+	
+	// Get login attempts in the last 24 hours
+	loginAttemptsLast24h := c.getLoginAttempts(ctx, 24)
+	successfulLoginsLast24h := c.getSuccessfulLogins(ctx, 24)
+	failedLoginsLast24h := c.getFailedLogins(ctx, 24)
+	
+	// Calculate success rate (percentage)
+	var successRateLastHour, successRateLast24h float64
+	if loginAttemptsLastHour > 0 {
+		successRateLastHour = (float64(successfulLoginsLastHour) / float64(loginAttemptsLastHour)) * 100
+	}
+	if loginAttemptsLast24h > 0 {
+		successRateLast24h = (float64(successfulLoginsLast24h) / float64(loginAttemptsLast24h)) * 100
+	}
+	
+	// Update metrics
+	c.metrics.LoginAttemptsLastHour.Set(float64(loginAttemptsLastHour))
+	c.metrics.LoginSuccessLastHour.Set(float64(successfulLoginsLastHour))
+	c.metrics.LoginFailedLastHour.Set(float64(failedLoginsLastHour))
+	c.metrics.LoginSuccessRateLastHour.Set(successRateLastHour)
+	
+	c.metrics.LoginAttemptsLast24h.Set(float64(loginAttemptsLast24h))
+	c.metrics.LoginSuccessLast24h.Set(float64(successfulLoginsLast24h))
+	c.metrics.LoginFailedLast24h.Set(float64(failedLoginsLast24h))
+	c.metrics.LoginSuccessRateLast24h.Set(successRateLast24h)
+	
+	log.Printf("Login rate metrics: attempts_1h=%d, success_1h=%d, failed_1h=%d, success_rate_1h=%.2f%%, attempts_24h=%d, success_24h=%d, failed_24h=%d, success_rate_24h=%.2f%%",
+		loginAttemptsLastHour, successfulLoginsLastHour, failedLoginsLastHour, successRateLastHour,
+		loginAttemptsLast24h, successfulLoginsLast24h, failedLoginsLast24h, successRateLast24h)
+}
+
+// getLoginAttempts gets total login attempts in the last N hours
+func (c *UserMetricsCollector) getLoginAttempts(ctx context.Context, hours int) int {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM user_activities 
+		WHERE activity_type IN ('login', 'login_success', 'login_failed', 'login_google_success', 'login_google_failed', 'login_invalid_credentials')
+		AND created_at >= NOW() - INTERVAL '%d hours'
+	`
+	
+	err := c.db.QueryRowContext(ctx, fmt.Sprintf(query, hours)).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting login attempts for %d hours: %v", hours, err)
+		return 0
+	}
+	
+	return count
+}
+
+// getSuccessfulLogins gets successful login attempts in the last N hours
+func (c *UserMetricsCollector) getSuccessfulLogins(ctx context.Context, hours int) int {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM user_activities 
+		WHERE activity_type IN ('login_success', 'login_google_success', 'login')
+		AND created_at >= NOW() - INTERVAL '%d hours'
+	`
+	
+	err := c.db.QueryRowContext(ctx, fmt.Sprintf(query, hours)).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting successful logins for %d hours: %v", hours, err)
+		return 0
+	}
+	
+	return count
+}
+
+// getFailedLogins gets failed login attempts in the last N hours
+func (c *UserMetricsCollector) getFailedLogins(ctx context.Context, hours int) int {
+	var count int
+	query := `
+		SELECT COUNT(*) 
+		FROM user_activities 
+		WHERE activity_type IN ('login_failed', 'login_google_failed', 'login_invalid_credentials')
+		AND created_at >= NOW() - INTERVAL '%d hours'
+	`
+	
+	err := c.db.QueryRowContext(ctx, fmt.Sprintf(query, hours)).Scan(&count)
+	if err != nil {
+		log.Printf("Error getting failed logins for %d hours: %v", hours, err)
 		return 0
 	}
 	

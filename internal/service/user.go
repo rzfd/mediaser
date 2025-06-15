@@ -1,6 +1,9 @@
 package service
 
-import "github.com/rzfd/mediashar/internal/models"
+import (
+	"github.com/rzfd/mediashar/internal/models"
+	"gorm.io/gorm"
+)
 
 type UserService interface {
 	Create(user *models.User) error
@@ -12,4 +15,5 @@ type UserService interface {
 	List(page, pageSize int) ([]*models.User, error)
 	GetStreamers(page, pageSize int) ([]*models.User, error)
 	Authenticate(email, password string) (*models.User, error)
+	GetDB() *gorm.DB
 } 

@@ -2,11 +2,13 @@ package handler
 
 import (
 	"context"
+	"log"
 	"net/http"
 
 	"github.com/labstack/echo/v4"
 	"github.com/rzfd/mediashar/internal/models"
 	"github.com/rzfd/mediashar/internal/service"
+	"github.com/rzfd/mediashar/pkg/metrics"
 	"github.com/rzfd/mediashar/pkg/utils"
 	"google.golang.org/api/oauth2/v2"
 	"google.golang.org/api/option"
@@ -76,20 +78,34 @@ func (h *AuthHandler) Login(c echo.Context) error {
 	}
 
 	if err := c.Bind(&req); err != nil {
+		// Record failed login due to bad request
+		metrics.GetMetrics().RecordUserLogin("api-gateway", "email", "failed_bad_request")
 		return c.JSON(http.StatusBadRequest, utils.ErrorResponse("Invalid request", err))
 	}
 
 	// Authenticate user
 	user, err := h.userService.Authenticate(req.Email, req.Password)
 	if err != nil {
+		// Record failed login due to invalid credentials
+		metrics.GetMetrics().RecordUserLogin("api-gateway", "email", "failed_invalid_credentials")
+		// Record failed login activity in database (use dummy user ID 0 for failed attempts)
+		h.recordFailedLoginActivity(req.Email, "login_invalid_credentials")
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Invalid credentials", err))
 	}
 
 	// Generate JWT token
 	token, err := h.authService.GenerateToken(user)
 	if err != nil {
+		// Record failed login due to token generation error
+		metrics.GetMetrics().RecordUserLogin("api-gateway", "email", "failed_token_error")
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to generate token", err))
 	}
+
+	// Record successful login
+	metrics.GetMetrics().RecordUserLogin("api-gateway", "email", "success")
+	
+	// Record login activity in database
+	h.recordUserActivity(user.ID, "login_success")
 
 	// Don't return password
 	user.Password = ""
@@ -236,6 +252,8 @@ func (h *AuthHandler) GoogleLogin(c echo.Context) error {
 	// Verify Google JWT token
 	userInfo, err := h.verifyGoogleToken(req.Credential)
 	if err != nil {
+		// Record failed Google login
+		metrics.GetMetrics().RecordUserLogin("api-gateway", "google", "failed_invalid_token")
 		return c.JSON(http.StatusUnauthorized, utils.ErrorResponse("Invalid Google token", err))
 	}
 
@@ -259,8 +277,16 @@ func (h *AuthHandler) GoogleLogin(c echo.Context) error {
 	// Generate JWT token
 	token, err := h.authService.GenerateToken(user)
 	if err != nil {
+		// Record failed Google login due to token error
+		metrics.GetMetrics().RecordUserLogin("api-gateway", "google", "failed_token_error")
 		return c.JSON(http.StatusInternalServerError, utils.ErrorResponse("Failed to generate token", err))
 	}
+
+	// Record successful Google login
+	metrics.GetMetrics().RecordUserLogin("api-gateway", "google", "success")
+	
+	// Record Google login activity in database
+	h.recordUserActivity(user.ID, "login_google_success")
 
 	// Don't return password
 	user.Password = ""
@@ -302,4 +328,46 @@ func (h *AuthHandler) verifyGoogleToken(credential string) (*GoogleUserInfo, err
 	}
 
 	return userInfo, nil
+}
+
+// recordUserActivity records user activity in the database
+func (h *AuthHandler) recordUserActivity(userID uint, activityType string) {
+	// Get database connection from user service
+	db := h.userService.GetDB()
+	if db == nil {
+		return // Skip if no database connection
+	}
+	
+	// Insert activity record
+	query := `INSERT INTO user_activities (user_id, activity_type, created_at) VALUES (?, ?, NOW())`
+	err := db.Exec(query, userID, activityType).Error
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to record user activity: %v", err)
+	}
+}
+
+// recordFailedLoginActivity records failed login activity in the database
+func (h *AuthHandler) recordFailedLoginActivity(email string, activityType string) {
+	// Get database connection from user service
+	db := h.userService.GetDB()
+	if db == nil {
+		return // Skip if no database connection
+	}
+	
+	// Try to find user by email to get proper user_id
+	user, err := h.userService.GetByEmail(email)
+	if err != nil {
+		// If user not found, skip recording (can't record without valid user_id)
+		log.Printf("Cannot record failed login activity for non-existent user: %s", email)
+		return
+	}
+	
+	// Insert activity record with valid user_id
+	query := `INSERT INTO user_activities (user_id, activity_type, created_at) VALUES (?, ?, NOW())`
+	err = db.Exec(query, user.ID, activityType).Error
+	if err != nil {
+		// Log error but don't fail the request
+		log.Printf("Failed to record failed login activity: %v", err)
+	}
 } 
