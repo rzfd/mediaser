@@ -1,0 +1,56 @@
+# Multi-stage build for Language Service
+FROM golang:1.23-alpine AS builder
+
+# Set working directory
+WORKDIR /app
+
+# Install build dependencies
+RUN apk add --no-cache git ca-certificates tzdata
+
+# Copy go mod files
+COPY go.mod go.sum ./
+
+# Download dependencies
+RUN go mod download
+
+# Copy source code
+COPY . .
+
+# Build the language service binary
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags '-extldflags "-static"' \
+    -o language-service ./cmd/language-service/main.go
+
+# Final stage - minimal image
+FROM alpine:latest
+
+# Install ca-certificates for HTTPS calls
+RUN apk --no-cache add ca-certificates curl
+
+# Create non-root user
+RUN addgroup -S appgroup && adduser -S appuser -G appgroup
+
+# Set working directory
+WORKDIR /app
+
+# Copy binary from builder stage
+COPY --from=builder /app/language-service .
+
+# Copy configuration files if they exist
+COPY --from=builder /app/configs ./configs
+
+# Change ownership to non-root user
+RUN chown -R appuser:appgroup /app
+
+# Switch to non-root user
+USER appuser
+
+# Expose gRPC port
+EXPOSE 8085
+
+# Health check - check if gRPC port is listening
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD netstat -an | grep :8085 || exit 1
+
+# Run the language service
+CMD ["./language-service"] 

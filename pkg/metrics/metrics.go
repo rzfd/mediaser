@@ -30,6 +30,20 @@ type Metrics struct {
 	DonationAmount        *prometheus.HistogramVec
 	PaymentsProcessed     *prometheus.CounterVec
 	
+	// User metrics
+	UserRegistrationsTotal *prometheus.CounterVec
+	TotalUsersRegistered   prometheus.Gauge
+	ActiveUsersTotal       prometheus.Gauge
+	OnlineUsersCurrent     prometheus.Gauge
+	ActiveUsers24h         prometheus.Gauge
+	ActiveUsers7d          prometheus.Gauge
+	ActiveUsers30d         prometheus.Gauge
+	UserLoginTotal         *prometheus.CounterVec
+	UserLogoutTotal        *prometheus.CounterVec
+	UserActivityTotal      *prometheus.CounterVec
+	ActiveSessionsTotal    prometheus.Gauge
+	SessionDurationSeconds *prometheus.HistogramVec
+	
 	// System metrics
 	GoRoutines            prometheus.Gauge
 	MemoryUsage          prometheus.Gauge
@@ -128,6 +142,86 @@ func NewMetrics(serviceName string) *Metrics {
 			[]string{"service", "provider", "status"},
 		),
 		
+		// User metrics
+		UserRegistrationsTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "user_registrations_total",
+				Help: "Total number of user registrations",
+			},
+			[]string{"service", "platform", "status"},
+		),
+		TotalUsersRegistered: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "total_users_registered",
+				Help: "Total number of registered users",
+			},
+		),
+		ActiveUsersTotal: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_users_total",
+				Help: "Total number of active users",
+			},
+		),
+		OnlineUsersCurrent: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "online_users_current",
+				Help: "Current number of online users",
+			},
+		),
+		ActiveUsers24h: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_users_24h",
+				Help: "Number of active users in the last 24 hours",
+			},
+		),
+		ActiveUsers7d: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_users_7d",
+				Help: "Number of active users in the last 7 days",
+			},
+		),
+		ActiveUsers30d: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_users_30d",
+				Help: "Number of active users in the last 30 days",
+			},
+		),
+		UserLoginTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "user_login_total",
+				Help: "Total number of user logins",
+			},
+			[]string{"service", "method", "status"},
+		),
+		UserLogoutTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "user_logout_total",
+				Help: "Total number of user logouts",
+			},
+			[]string{"service"},
+		),
+		UserActivityTotal: prometheus.NewCounterVec(
+			prometheus.CounterOpts{
+				Name: "user_activity_total",
+				Help: "Total user activities",
+			},
+			[]string{"service", "activity_type"},
+		),
+		ActiveSessionsTotal: prometheus.NewGauge(
+			prometheus.GaugeOpts{
+				Name: "active_sessions_total",
+				Help: "Total number of active user sessions",
+			},
+		),
+		SessionDurationSeconds: prometheus.NewHistogramVec(
+			prometheus.HistogramOpts{
+				Name:    "session_duration_seconds",
+				Help:    "Duration of user sessions in seconds",
+				Buckets: []float64{60, 300, 900, 1800, 3600, 7200, 14400}, // 1min to 4hours
+			},
+			[]string{"service"},
+		),
+		
 		// System metrics
 		GoRoutines: prometheus.NewGauge(
 			prometheus.GaugeOpts{
@@ -162,6 +256,18 @@ func NewMetrics(serviceName string) *Metrics {
 		m.DonationsTotal,
 		m.DonationAmount,
 		m.PaymentsProcessed,
+		m.UserRegistrationsTotal,
+		m.TotalUsersRegistered,
+		m.ActiveUsersTotal,
+		m.OnlineUsersCurrent,
+		m.ActiveUsers24h,
+		m.ActiveUsers7d,
+		m.ActiveUsers30d,
+		m.UserLoginTotal,
+		m.UserLogoutTotal,
+		m.UserActivityTotal,
+		m.ActiveSessionsTotal,
+		m.SessionDurationSeconds,
 		m.GoRoutines,
 		m.MemoryUsage,
 		m.CPUUsage,
@@ -198,6 +304,46 @@ func (m *Metrics) RecordDonation(serviceName, currency, status string, amount fl
 // RecordPayment records payment metrics
 func (m *Metrics) RecordPayment(serviceName, provider, status string) {
 	m.PaymentsProcessed.WithLabelValues(serviceName, provider, status).Inc()
+}
+
+// RecordUserRegistration records user registration metrics
+func (m *Metrics) RecordUserRegistration(serviceName, platform, status string) {
+	m.UserRegistrationsTotal.WithLabelValues(serviceName, platform, status).Inc()
+}
+
+// RecordUserLogin records user login metrics
+func (m *Metrics) RecordUserLogin(serviceName, method, status string) {
+	m.UserLoginTotal.WithLabelValues(serviceName, method, status).Inc()
+}
+
+// RecordUserLogout records user logout metrics
+func (m *Metrics) RecordUserLogout(serviceName string) {
+	m.UserLogoutTotal.WithLabelValues(serviceName).Inc()
+}
+
+// RecordUserActivity records user activity metrics
+func (m *Metrics) RecordUserActivity(serviceName, activityType string) {
+	m.UserActivityTotal.WithLabelValues(serviceName, activityType).Inc()
+}
+
+// RecordSessionDuration records session duration
+func (m *Metrics) RecordSessionDuration(serviceName string, duration float64) {
+	m.SessionDurationSeconds.WithLabelValues(serviceName).Observe(duration)
+}
+
+// UpdateUserMetrics updates user count metrics
+func (m *Metrics) UpdateUserMetrics(totalUsers, activeUsers, onlineUsers float64) {
+	m.TotalUsersRegistered.Set(totalUsers)
+	m.ActiveUsersTotal.Set(activeUsers)
+	m.OnlineUsersCurrent.Set(onlineUsers)
+}
+
+// UpdateActiveUsersMetrics updates active users metrics for different periods
+func (m *Metrics) UpdateActiveUsersMetrics(users24h, users7d, users30d, activeSessions float64) {
+	m.ActiveUsers24h.Set(users24h)
+	m.ActiveUsers7d.Set(users7d)
+	m.ActiveUsers30d.Set(users30d)
+	m.ActiveSessionsTotal.Set(activeSessions)
 }
 
 // UpdateSystemMetrics updates system metrics

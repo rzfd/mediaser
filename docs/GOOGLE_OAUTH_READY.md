@@ -46,7 +46,7 @@ Google OAuth telah berhasil diimplementasikan di MediaShar! 🚀
 Replace `your-google-client-id-here` dengan Client ID yang asli:
 
 ```bash
-export GOOGLE_CLIENT_ID="1234567890-abcdefghijklmnopqrstuvwxyz.apps.googleusercontent.com"
+export GOOGLE_CLIENT_ID="280179071084-vu43evndbtao8qknngnntdiudqmddtva.apps.googleusercontent.com"
 ```
 
 ### 3. Start Aplikasi

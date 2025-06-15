@@ -7,7 +7,7 @@ FROM node:18-alpine AS build
 WORKDIR /app
 
 # Build arguments for React environment variables
-ARG REACT_APP_GOOGLE_CLIENT_ID
+ARG REACT_APP_GOOGLE_CLIENT_ID=280179071084-vu43evndbtao8qknngnntdiudqmddtva.apps.googleusercontent.com 
 ARG REACT_APP_API_URL=http://localhost:8080/api
 ARG REACT_APP_BACKEND_URL=http://localhost:8080
 ARG REACT_APP_CURRENCY_API=http://localhost:8094

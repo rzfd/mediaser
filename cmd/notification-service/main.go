@@ -1,56 +1,53 @@
 package main
 
 import (
-	"log"
-	"net"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/reflection"
-
-	grpcServer "github.com/rzfd/mediashar/internal/grpc"
-	"github.com/rzfd/mediashar/pkg/pb"
+	"github.com/rzfd/mediashar/internal/server"
+	"github.com/rzfd/mediashar/pkg/logger"
+	"github.com/rzfd/mediashar/pkg/metrics"
 )
 
 func main() {
-	log.Println("🔔 Starting Notification Microservice...")
+	// Initialize logger
+	loggerConfig := logger.Config{
+		Level:       getEnv("LOG_LEVEL", "info"),
+		Output:      getEnv("LOG_OUTPUT", "stdout"),
+		LogFile:     getEnv("LOG_FILE", "logs/notification-service.log"),
+		ServiceName: "notification-service",
+	}
+	logger.Init(loggerConfig)
+	appLogger := logger.GetLogger()
 
-	// Initialize notification service
-	notificationService := grpcServer.NewMockNotificationService()
+	// Initialize metrics
+	metrics.Init("notification-service")
 
-	// Create gRPC server
-	lis, err := net.Listen("tcp", ":"+getEnv("GRPC_PORT", "9093"))
+	appLogger.Info("Starting Notification Service...")
+
+	// Create notification server
+	notificationServer, err := server.NewNotificationServer()
 	if err != nil {
-		log.Fatalf("Failed to listen: %v", err)
+		appLogger.Fatal(err, "Failed to create notification server")
 	}
 
-	grpcSrv := grpc.NewServer()
-	
-	// Register notification service
-	notificationGRPCServer := grpcServer.NewNotificationGRPCServer(notificationService)
-	pb.RegisterNotificationServiceServer(grpcSrv, notificationGRPCServer)
-
-	// Enable reflection for development
-	reflection.Register(grpcSrv)
-
-	// Graceful shutdown
+	// Start server
 	go func() {
-		log.Printf("Notification Service listening on port %s", getEnv("GRPC_PORT", "9093"))
-		if err := grpcSrv.Serve(lis); err != nil {
-			log.Fatalf("Failed to serve: %v", err)
+		appLogger.Info("Notification Service listening", "port", notificationServer.GetPort())
+		if err := notificationServer.Start(); err != nil {
+			appLogger.Fatal(err, "Failed to serve")
 		}
 	}()
 
-	// Wait for interrupt signal to gracefully shutdown
+	// Graceful shutdown
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
 
-	log.Println("🛑 Shutting down Notification Service...")
-	grpcSrv.GracefulStop()
-	log.Println("Notification Service stopped")
+	appLogger.Info("Shutting down Notification Service...")
+	notificationServer.Stop()
+	appLogger.Info("Notification Service stopped")
 }
 
 func getEnv(key, defaultValue string) string {
